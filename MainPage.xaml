@@ -27,7 +27,7 @@
 
                 <!-- Brand -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
-                    <FontIcon Glyph="&#xE749;" FontSize="16" Foreground="{StaticResource AccentBrush}" />
+                    <FontIcon Glyph="&#xF500;" FontSize="16" Foreground="{StaticResource AccentBrush}" />
                     <TextBlock VerticalAlignment="Center" FontSize="17" FontWeight="Bold">
                         <Run Text="Imprime" Foreground="{StaticResource AccentBrush}" /><Run Text="+" Foreground="{StaticResource BrandPlusBrush}" FontWeight="ExtraBold" />
                     </TextBlock>
@@ -40,21 +40,21 @@
                         <Button Style="{StaticResource ToolbarPrimaryButton}" ToolTipService.ToolTip="Agregar imágenes"
                                 Click="OnAddImages">
                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                <FontIcon Glyph="&#xEB9F;" FontSize="14" />
+                                <FontIcon Glyph="&#xF42B;" FontSize="14" />
                                 <TextBlock Text="Agregar" />
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Agregar desde comprimido (ZIP, RAR, 7Z, TAR...)"
                                 Click="OnAddArchive">
                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                <FontIcon Glyph="&#xE8B7;" FontSize="14" />
+                                <FontIcon Glyph="&#xF391;" FontSize="14" />
                                 <TextBlock Text="Comprimido" />
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Pegar desde portapapeles (Ctrl+V)"
                                 Click="OnPaste">
                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                <FontIcon Glyph="&#xE77F;" FontSize="14" />
+                                <FontIcon Glyph="&#xF290;" FontSize="14" />
                                 <TextBlock Text="Pegar" />
                             </StackPanel>
                         </Button>
@@ -62,15 +62,15 @@
                         <Border Width="1" Margin="6,8" Background="{StaticResource BorderBrush2}" />
 
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Alejar" Click="OnZoomOut">
-                            <FontIcon Glyph="&#xE738;" FontSize="14" />
+                            <FontIcon Glyph="&#xF63B;" FontSize="14" />
                         </Button>
                         <TextBlock x:Name="ZoomLabel" Text="100%" VerticalAlignment="Center" MinWidth="40" TextAlignment="Center"
                                    FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Acercar" Click="OnZoomIn">
-                            <FontIcon Glyph="&#xE710;" FontSize="14" />
+                            <FontIcon Glyph="&#xF64D;" FontSize="14" />
                         </Button>
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Ajustar a ventana" Click="OnZoomFit">
-                            <FontIcon Glyph="&#xE9A6;" FontSize="14" />
+                            <FontIcon Glyph="&#xF14D;" FontSize="14" />
                         </Button>
 
                         <Border Width="1" Margin="6,8" Background="{StaticResource BorderBrush2}" />
@@ -78,7 +78,7 @@
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Modo póster: una imagen en varias páginas"
                                 Click="OnPosterButton">
                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                <FontIcon Glyph="&#xE80A;" FontSize="14" />
+                                <FontIcon Glyph="&#xF310;" FontSize="14" />
                                 <TextBlock Text="Póster" />
                             </StackPanel>
                         </Button>
@@ -88,18 +88,18 @@
                         <ComboBox MinWidth="150" VerticalAlignment="Center" ToolTipService.ToolTip="Seleccionar impresora"
                                   PlaceholderText="Cargando impresoras..." />
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Configuración de impresora">
-                            <FontIcon Glyph="&#xE713;" FontSize="14" />
+                            <FontIcon Glyph="&#xF56B;" FontSize="14" />
                         </Button>
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Exportar a PDF" Click="OnExportPdf">
                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                <FontIcon Glyph="&#xEA90;" FontSize="14" />
+                                <FontIcon Glyph="&#xF63E;" FontSize="14" />
                                 <TextBlock Text="PDF" />
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource ToolbarPrimaryButton}" ToolTipService.ToolTip="Imprimir todas las páginas"
                                 Click="OnPrint">
                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                <FontIcon Glyph="&#xE749;" FontSize="14" />
+                                <FontIcon Glyph="&#xF501;" FontSize="14" />
                                 <TextBlock Text="Imprimir" />
                             </StackPanel>
                         </Button>
@@ -107,11 +107,11 @@
                         <Border Width="1" Margin="6,8" Background="{StaticResource BorderBrush2}" />
 
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Limpiar configuraciones individuales">
-                            <FontIcon Glyph="&#xED60;" FontSize="14" />
+                            <FontIcon Glyph="&#xF331;" FontSize="14" />
                         </Button>
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Vaciar todo" Click="OnClearAll">
                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                                <FontIcon Glyph="&#xF78B;" FontSize="14" />
                                 <TextBlock Text="Vaciar" />
                             </StackPanel>
                         </Button>
@@ -120,7 +120,7 @@
 
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Verificar actualizaciones"
                                 Click="OnCheckUpdate">
-                            <FontIcon Glyph="&#xE896;" FontSize="14" />
+                            <FontIcon Glyph="&#xF295;" FontSize="14" />
                         </Button>
                     </StackPanel>
                 </ScrollViewer>
@@ -146,7 +146,7 @@
 
                     <Border Grid.Row="0" Padding="14,10" Background="{StaticResource AccentBrush}">
                         <StackPanel Orientation="Horizontal" Spacing="7">
-                            <FontIcon Glyph="&#xE713;" FontSize="14" Foreground="White" />
+                            <FontIcon Glyph="&#xF3E5;" FontSize="14" Foreground="White" />
                             <TextBlock Text="Ajustes Globales" FontWeight="Bold" FontSize="13.5" Foreground="White" />
                         </StackPanel>
                     </Border>
@@ -161,7 +161,7 @@
                                            Foreground="{StaticResource PanelTextBrush}" TextWrapping="Wrap" />
                                 <Button HorizontalAlignment="Stretch" Margin="0,4,0,0" Click="OnConfigPage">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <FontIcon Glyph="&#xE713;" FontSize="13" />
+                                        <FontIcon Glyph="&#xF3E5;" FontSize="13" />
                                         <TextBlock Text="Configurar página" />
                                     </StackPanel>
                                 </Button>
@@ -401,16 +401,16 @@
                         Visibility="Collapsed">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
                         <Button x:Name="NavFirst" Style="{StaticResource ToolbarButton}" Click="OnNavFirst"
-                                ToolTipService.ToolTip="Primera página"><FontIcon Glyph="&#xE892;" FontSize="13" /></Button>
+                                ToolTipService.ToolTip="Primera página"><FontIcon Glyph="&#xF276;" FontSize="13" /></Button>
                         <Button x:Name="NavPrev" Style="{StaticResource ToolbarButton}" Click="OnNavPrev"
-                                ToolTipService.ToolTip="Anterior"><FontIcon Glyph="&#xE76B;" FontSize="13" /></Button>
+                                ToolTipService.ToolTip="Anterior"><FontIcon Glyph="&#xF284;" FontSize="13" /></Button>
                         <TextBlock x:Name="PageNavLabel" Text="Página 1 de 1" VerticalAlignment="Center"
                                    MinWidth="120" TextAlignment="Center" FontSize="12.5" FontWeight="SemiBold"
                                    Foreground="{StaticResource PanelTextBrush}" />
                         <Button x:Name="NavNext" Style="{StaticResource ToolbarButton}" Click="OnNavNext"
-                                ToolTipService.ToolTip="Siguiente"><FontIcon Glyph="&#xE76C;" FontSize="13" /></Button>
+                                ToolTipService.ToolTip="Siguiente"><FontIcon Glyph="&#xF285;" FontSize="13" /></Button>
                         <Button x:Name="NavLast" Style="{StaticResource ToolbarButton}" Click="OnNavLast"
-                                ToolTipService.ToolTip="Última página"><FontIcon Glyph="&#xE893;" FontSize="13" /></Button>
+                                ToolTipService.ToolTip="Última página"><FontIcon Glyph="&#xF277;" FontSize="13" /></Button>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -426,7 +426,7 @@
 
                     <Border Grid.Row="0" Padding="14,10" Background="{StaticResource AccentBrush}">
                         <StackPanel Orientation="Horizontal" Spacing="7">
-                            <FontIcon Glyph="&#xE8A9;" FontSize="14" Foreground="White" />
+                            <FontIcon Glyph="&#xF56B;" FontSize="14" Foreground="White" />
                             <TextBlock Text="Imagen seleccionada" FontWeight="Bold" FontSize="13.5" Foreground="White" />
                         </StackPanel>
                     </Border>
@@ -434,7 +434,7 @@
                     <Grid Grid.Row="1">
                         <!-- Estado vacío -->
                         <StackPanel x:Name="InspectorEmpty" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" Padding="24">
-                            <FontIcon Glyph="&#xE7C9;" FontSize="36" Foreground="{StaticResource BorderBrush2}" HorizontalAlignment="Center" />
+                            <FontIcon Glyph="&#xF403;" FontSize="36" Foreground="{StaticResource BorderBrush2}" HorizontalAlignment="Center" />
                             <TextBlock Text="Clic en imagen para editar. Ctrl+clic para seleccionar varias."
                                        FontSize="12.5" Foreground="{StaticResource TextMutedBrush}"
                                        HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />

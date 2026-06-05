@@ -78,6 +78,8 @@
   <ItemGroup>
     <!-- Modelo U²-Net (quita-fondo offline). Viaja junto al exe. -->
     <Content Include="Models\u2netp.onnx" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Fuente bootstrap-icons (paridad de iconos 1:1 con la versión Tauri). -->
+    <Content Include="Assets\bootstrap-icons.ttf" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!--

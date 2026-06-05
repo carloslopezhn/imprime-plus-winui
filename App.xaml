@@ -38,6 +38,12 @@
             <!-- Rosa de la marca ("+") — .brand-plus del editor.css -->
             <SolidColorBrush x:Key="BrandPlusBrush" Color="#FFE11D48" />
 
+            <!-- Fuente de iconos bootstrap-icons (igual que la versión Tauri). -->
+            <FontFamily x:Key="BiFont">/Assets/bootstrap-icons.ttf#bootstrap-icons</FontFamily>
+            <Style TargetType="FontIcon">
+                <Setter Property="FontFamily" Value="{StaticResource BiFont}" />
+            </Style>
+
             <!-- ===== Botón de toolbar (.tb-btn) ===== -->
             <Style x:Key="ToolbarButton" TargetType="Button">
                 <Setter Property="Background" Value="Transparent" />
