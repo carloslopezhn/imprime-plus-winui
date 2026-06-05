@@ -28,9 +28,8 @@
                 <!-- Brand -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
                     <FontIcon Glyph="&#xE749;" FontSize="16" Foreground="{StaticResource AccentBrush}" />
-                    <TextBlock VerticalAlignment="Center" FontSize="16" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextBrush}">
-                        <Run Text="Imprime" /><Run Text="+" Foreground="{StaticResource AccentBrush}" />
+                    <TextBlock VerticalAlignment="Center" FontSize="17" FontWeight="Bold">
+                        <Run Text="Imprime" Foreground="{StaticResource AccentBrush}" /><Run Text="+" Foreground="{StaticResource BrandPlusBrush}" FontWeight="ExtraBold" />
                     </TextBlock>
                 </StackPanel>
 
@@ -145,11 +144,10 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0" Padding="14,12" BorderBrush="{StaticResource BorderBrush2}" BorderThickness="0,0,0,1">
+                    <Border Grid.Row="0" Padding="14,10" Background="{StaticResource AccentBrush}">
                         <StackPanel Orientation="Horizontal" Spacing="7">
-                            <FontIcon Glyph="&#xE713;" FontSize="14" Foreground="{StaticResource PanelTextBrush}" />
-                            <TextBlock Text="Ajustes Globales" FontWeight="SemiBold" FontSize="13.5"
-                                       Foreground="{StaticResource TextBrush}" />
+                            <FontIcon Glyph="&#xE713;" FontSize="14" Foreground="White" />
+                            <TextBlock Text="Ajustes Globales" FontWeight="Bold" FontSize="13.5" Foreground="White" />
                         </StackPanel>
                     </Border>
 
@@ -269,18 +267,43 @@
                 </Grid>
             </Border>
 
-            <!-- ===== Centro: lienzo Win2D (Direct2D / GPU) ===== -->
+            <!-- ===== Centro: lienzo Win2D (Direct2D / GPU) + nav de páginas ===== -->
             <Grid Grid.Column="1" x:Name="CanvasHost" AllowDrop="True"
                   DragOver="OnCanvasDragOver" Drop="OnCanvasDrop" Background="Transparent">
-                <canvas:CanvasControl x:Name="PageCanvas" Draw="PageCanvas_Draw" ClearColor="#FFE8EDF3"
-                                      PointerWheelChanged="OnCanvasWheel"
-                                      PointerPressed="OnCanvasPressed"
-                                      PointerMoved="OnCanvasMoved"
-                                      PointerReleased="OnCanvasReleased"
-                                      PointerExited="OnCanvasReleased" />
-                <TextBlock x:Name="EmptyHint" Text="Arrastra imágenes aquí — o usa Agregar / Pegar / Comprimido"
-                           VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,12"
-                           FontSize="12" Foreground="{StaticResource TextMutedBrush}" IsHitTestVisible="False" />
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0">
+                    <canvas:CanvasControl x:Name="PageCanvas" Draw="PageCanvas_Draw" ClearColor="#FFE8EDF3"
+                                          PointerWheelChanged="OnCanvasWheel"
+                                          PointerPressed="OnCanvasPressed"
+                                          PointerMoved="OnCanvasMoved"
+                                          PointerReleased="OnCanvasReleased"
+                                          PointerExited="OnCanvasReleased" />
+                    <TextBlock x:Name="EmptyHint" Text="Arrastra imágenes aquí — o usa Agregar / Pegar / Comprimido"
+                               VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,12"
+                               FontSize="12" Foreground="{StaticResource TextMutedBrush}" IsHitTestVisible="False" />
+                </Grid>
+
+                <!-- Barra de navegación de páginas (.page-nav) -->
+                <Border Grid.Row="1" x:Name="PageNavBar" Background="{StaticResource BgPanelBrush}"
+                        BorderBrush="{StaticResource BorderBrush2}" BorderThickness="0,1,0,0" Padding="8,6"
+                        Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                        <Button x:Name="NavFirst" Style="{StaticResource ToolbarButton}" Click="OnNavFirst"
+                                ToolTipService.ToolTip="Primera página"><FontIcon Glyph="&#xE892;" FontSize="13" /></Button>
+                        <Button x:Name="NavPrev" Style="{StaticResource ToolbarButton}" Click="OnNavPrev"
+                                ToolTipService.ToolTip="Anterior"><FontIcon Glyph="&#xE76B;" FontSize="13" /></Button>
+                        <TextBlock x:Name="PageNavLabel" Text="Página 1 de 1" VerticalAlignment="Center"
+                                   MinWidth="120" TextAlignment="Center" FontSize="12.5" FontWeight="SemiBold"
+                                   Foreground="{StaticResource PanelTextBrush}" />
+                        <Button x:Name="NavNext" Style="{StaticResource ToolbarButton}" Click="OnNavNext"
+                                ToolTipService.ToolTip="Siguiente"><FontIcon Glyph="&#xE76C;" FontSize="13" /></Button>
+                        <Button x:Name="NavLast" Style="{StaticResource ToolbarButton}" Click="OnNavLast"
+                                ToolTipService.ToolTip="Última página"><FontIcon Glyph="&#xE893;" FontSize="13" /></Button>
+                    </StackPanel>
+                </Border>
             </Grid>
 
             <!-- ===== Panel derecho: Inspector ===== -->
@@ -292,23 +315,19 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <Border Grid.Row="0" Padding="14,12" BorderBrush="{StaticResource BorderBrush2}" BorderThickness="0,0,0,1">
+                    <Border Grid.Row="0" Padding="14,10" Background="{StaticResource AccentBrush}">
                         <StackPanel Orientation="Horizontal" Spacing="7">
-                            <FontIcon Glyph="&#xE7C3;" FontSize="14" Foreground="{StaticResource PanelTextBrush}" />
-                            <TextBlock Text="Inspector" FontWeight="SemiBold" FontSize="13.5"
-                                       Foreground="{StaticResource TextBrush}" />
+                            <FontIcon Glyph="&#xE8A9;" FontSize="14" Foreground="White" />
+                            <TextBlock Text="Imagen seleccionada" FontWeight="Bold" FontSize="13.5" Foreground="White" />
                         </StackPanel>
                     </Border>
 
                     <Grid Grid.Row="1">
                         <!-- Estado vacío -->
-                        <StackPanel x:Name="InspectorEmpty" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10" Padding="20">
-                            <FontIcon Glyph="&#xE7C3;" FontSize="34" Foreground="{StaticResource BorderBrush2}" />
-                            <TextBlock Text="Selecciona una imagen" FontSize="13"
-                                       Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"
-                                       TextAlignment="Center" />
-                            <TextBlock Text="para editar zoom, forma, borde, filtros y título"
-                                       FontSize="11.5" Foreground="{StaticResource TextMutedBrush}"
+                        <StackPanel x:Name="InspectorEmpty" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12" Padding="24">
+                            <FontIcon Glyph="&#xE7C9;" FontSize="36" Foreground="{StaticResource BorderBrush2}" HorizontalAlignment="Center" />
+                            <TextBlock Text="Clic en imagen para editar. Ctrl+clic para seleccionar varias."
+                                       FontSize="12.5" Foreground="{StaticResource TextMutedBrush}"
                                        HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
                         </StackPanel>
 

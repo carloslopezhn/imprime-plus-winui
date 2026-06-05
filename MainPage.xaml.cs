@@ -71,6 +71,9 @@ public sealed partial class MainPage : Page
     private bool IsPoster => _posterEnabled && _images.Count > 0;
     private int PosterPageCount => Math.Max(1, _posterCols) * Math.Max(1, _posterRows);
 
+    // Página visible (vista de una página + barra de navegación inferior).
+    private int _currentPage;
+
     private const double PageGap = 40;   // separación entre páginas (unidades world)
     private const double Pad = 32;       // margen de la hoja al viewport
 
@@ -587,83 +590,66 @@ public sealed partial class MainPage : Page
         var items = _images.Select(i => (ImageItem?)i.ToItem()).ToList();
         var pages = LayoutEngine.Paginate(items, layout);
         int nPages = pages.Count;
+        _currentPage = Math.Clamp(_currentPage, 0, nPages - 1);
+        UpdatePageNav(nPages);
 
-        double worldW = layout.PageW;
-        double worldH = nPages * layout.PageH + (nPages - 1) * PageGap;
-
-        double baseScale = Math.Min(
-            (size.Width - 2 * Pad) / worldW,
-            (size.Height - 2 * Pad) / worldH);
+        // Vista de UNA página (como la versión vieja: navegación con la barra inferior).
+        double worldW = layout.PageW, worldH = layout.PageH;
+        double baseScale = Math.Min((size.Width - 2 * Pad) / worldW, (size.Height - 2 * Pad) / worldH);
         if (baseScale <= 0 || double.IsNaN(baseScale) || double.IsInfinity(baseScale)) baseScale = 0.05;
-
         double scale = baseScale * _userZoom;
         double ox = (size.Width - worldW * scale) / 2.0 + _panX;
         double oy = (size.Height - worldH * scale) / 2.0 + _panY;
 
         var byId = _images.ToDictionary(i => i.Id);
-        var pagePlacements = new List<List<Placement>>(nPages);
+        var placements = LayoutEngine.PlacePage(pages[_currentPage].Images, layout.Cols, layout.Rows);
 
         Color border = ColorHelper.FromArgb(255, 0xC7, 0xD2, 0xE0);
-        Color cellFill = ColorHelper.FromArgb(255, 0xF1, 0xF5, 0xFB);
-        Color cellStroke = ColorHelper.FromArgb(150, 0x3B, 0x82, 0xF6);
+        Color guide = ColorHelper.FromArgb(200, 0x9C, 0xA8, 0xB8);
         Color selStroke = ColorHelper.FromArgb(255, 0x25, 0x63, 0xEB);
-        using var dashed = new CanvasStrokeStyle { DashStyle = CanvasDashStyle.Dash };
 
-        for (int pi = 0; pi < nPages; pi++)
-        {
-            var placements = LayoutEngine.PlacePage(pages[pi].Images, layout.Cols, layout.Rows);
-            pagePlacements.Add(placements);
+        double px = ox, py = oy, pw = layout.PageW * scale, ph = layout.PageH * scale;
+        ds.FillRectangle(new Rect(px + 3, py + 4, pw, ph), ColorHelper.FromArgb(40, 0, 0, 0));
+        ds.FillRectangle(new Rect(px, py, pw, ph), Colors.White);
+        ds.DrawRectangle(new Rect(px, py, pw, ph), border, 1f);
 
-            double pageTop = pi * (layout.PageH + PageGap);
-            double px = ox + 0 * scale;
-            double py = oy + pageTop * scale;
-            double pw = layout.PageW * scale;
-            double ph = layout.PageH * scale;
+        var occupied = new bool[layout.Rows, layout.Cols];
+        foreach (var pl in placements)
+            for (int r = pl.Row; r < pl.Row + pl.RowSpan && r < layout.Rows; r++)
+                for (int c = pl.Col; c < pl.Col + pl.ColSpan && c < layout.Cols; c++)
+                    occupied[r, c] = true;
 
-            ds.FillRectangle(new Rect(px + 3, py + 4, pw, ph), ColorHelper.FromArgb(40, 0, 0, 0));
-            ds.FillRectangle(new Rect(px, py, pw, ph), Colors.White);
-            ds.DrawRectangle(new Rect(px, py, pw, ph), border, 1f);
-
-            // Celdas ocupadas (para dibujar punteado sólo en las vacías).
-            var occupied = new bool[layout.Rows, layout.Cols];
-            foreach (var pl in placements)
-                for (int r = pl.Row; r < pl.Row + pl.RowSpan && r < layout.Rows; r++)
-                    for (int c = pl.Col; c < pl.Col + pl.ColSpan && c < layout.Cols; c++)
-                        occupied[r, c] = true;
-
-            for (int r = 0; r < layout.Rows; r++)
-                for (int c = 0; c < layout.Cols; c++)
-                {
-                    if (occupied[r, c]) continue;
-                    double cx = layout.MarginLeft + c * (layout.CellW + layout.SpacingH);
-                    double cy = pageTop + layout.MarginTop + r * (layout.CellH + layout.SpacingV);
-                    var cell = new Rect(ox + cx * scale, oy + cy * scale, layout.CellW * scale, layout.CellH * scale);
-                    ds.FillRectangle(cell, cellFill);
-                    ds.DrawRectangle(cell, cellStroke, 1f, dashed);
-                }
-
-            // Imágenes.
-            foreach (var pl in placements)
+        // Guías de corte: cruz "+" en el centro de cada celda vacía (como la vieja).
+        for (int r = 0; r < layout.Rows; r++)
+            for (int c = 0; c < layout.Cols; c++)
             {
-                if (!byId.TryGetValue(pl.Image.Id, out var img)) continue;
-                double cellX = layout.MarginLeft + pl.Col * (layout.CellW + layout.SpacingH);
-                double cellY = pageTop + layout.MarginTop + pl.Row * (layout.CellH + layout.SpacingV);
-                double spanW = pl.ColSpan * layout.CellW + (pl.ColSpan - 1) * layout.SpacingH;
-                double spanH = pl.RowSpan * layout.CellH + (pl.RowSpan - 1) * layout.SpacingV;
-                var dest = new Rect(ox + cellX * scale, oy + cellY * scale, spanW * scale, spanH * scale);
-
-                ImageRenderer.Draw(ds, img, dest, scale);
-
-                if (_selected.Contains(img))
-                    ds.DrawRectangle(dest, selStroke, 2.5f);
+                if (occupied[r, c]) continue;
+                double ccx = layout.MarginLeft + c * (layout.CellW + layout.SpacingH) + layout.CellW / 2;
+                double ccy = layout.MarginTop + r * (layout.CellH + layout.SpacingV) + layout.CellH / 2;
+                double len = Math.Clamp(Math.Min(layout.CellW, layout.CellH) * scale * 0.08, 4, 14);
+                float sx = (float)(ox + ccx * scale), sy = (float)(oy + ccy * scale);
+                ds.DrawLine(sx - (float)len, sy, sx + (float)len, sy, guide, 1f);
+                ds.DrawLine(sx, sy - (float)len, sx, sy + (float)len, guide, 1f);
             }
+
+        foreach (var pl in placements)
+        {
+            if (!byId.TryGetValue(pl.Image.Id, out var img)) continue;
+            double cellX = layout.MarginLeft + pl.Col * (layout.CellW + layout.SpacingH);
+            double cellY = layout.MarginTop + pl.Row * (layout.CellH + layout.SpacingV);
+            double spanW = pl.ColSpan * layout.CellW + (pl.ColSpan - 1) * layout.SpacingH;
+            double spanH = pl.RowSpan * layout.CellH + (pl.RowSpan - 1) * layout.SpacingV;
+            var dest = new Rect(ox + cellX * scale, oy + cellY * scale, spanW * scale, spanH * scale);
+            ImageRenderer.Draw(ds, img, dest, scale);
+            if (_selected.Contains(img))
+                ds.DrawRectangle(dest, selStroke, 2.5f);
         }
 
         _lastScale = scale;
         _lastOx = ox;
         _lastOy = oy;
         _lastLayout = layout;
-        _lastPages = pagePlacements;
+        _lastPages = new List<List<Placement>> { placements };
     }
 
     // ---------- Modo póster ----------
@@ -672,9 +658,10 @@ public sealed partial class MainPage : Page
     {
         var src = Primary ?? _images[0];
         int n = PosterPageCount;
-        double worldW = layout.PageW;
-        double worldH = n * layout.PageH + (n - 1) * PageGap;
+        _currentPage = Math.Clamp(_currentPage, 0, n - 1);
+        UpdatePageNav(n);
 
+        double worldW = layout.PageW, worldH = layout.PageH; // una página a la vez
         double baseScale = Math.Min((size.Width - 2 * Pad) / worldW, (size.Height - 2 * Pad) / worldH);
         if (baseScale <= 0 || double.IsNaN(baseScale) || double.IsInfinity(baseScale)) baseScale = 0.05;
         double scale = baseScale * _userZoom;
@@ -684,19 +671,14 @@ public sealed partial class MainPage : Page
         Color border = ColorHelper.FromArgb(255, 0xC7, 0xD2, 0xE0);
         Color tag = ColorHelper.FromArgb(255, 0x64, 0x74, 0x8B);
 
-        for (int p = 0; p < n; p++)
-        {
-            double pageTop = p * (layout.PageH + PageGap);
-            double px = ox, py = oy + pageTop * scale, pw = layout.PageW * scale, ph = layout.PageH * scale;
-            ds.FillRectangle(new Rect(px + 3, py + 4, pw, ph), ColorHelper.FromArgb(40, 0, 0, 0));
-            ds.FillRectangle(new Rect(px, py, pw, ph), Colors.White);
-            ds.DrawRectangle(new Rect(px, py, pw, ph), border, 1f);
-            DrawPosterTile(ds, src, layout, p, ox, oy, scale, pageTop);
-            // Numeración de página (col,row) como referencia de armado.
-            int col = p % _posterCols, row = p / _posterCols;
-            using var fmt = new Microsoft.Graphics.Canvas.Text.CanvasTextFormat { FontSize = (float)Math.Max(9, 11 * scale) };
-            ds.DrawText($"{col + 1},{row + 1}", (float)(px + 6), (float)(py + 4), tag, fmt);
-        }
+        double px = ox, py = oy, pw = layout.PageW * scale, ph = layout.PageH * scale;
+        ds.FillRectangle(new Rect(px + 3, py + 4, pw, ph), ColorHelper.FromArgb(40, 0, 0, 0));
+        ds.FillRectangle(new Rect(px, py, pw, ph), Colors.White);
+        ds.DrawRectangle(new Rect(px, py, pw, ph), border, 1f);
+        DrawPosterTile(ds, src, layout, _currentPage, ox, oy, scale, 0);
+        int pcol = _currentPage % _posterCols, prow = _currentPage / _posterCols;
+        using (var fmt = new Microsoft.Graphics.Canvas.Text.CanvasTextFormat { FontSize = (float)Math.Max(9, 11 * scale) })
+            ds.DrawText($"{pcol + 1},{prow + 1}", (float)(px + 6), (float)(py + 4), tag, fmt);
 
         _lastScale = scale; _lastOx = ox; _lastOy = oy; _lastLayout = layout; _lastPages = new List<List<Placement>>();
     }
@@ -732,6 +714,25 @@ public sealed partial class MainPage : Page
         if (EmptyHint is not null)
             EmptyHint.Visibility = _images.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
+
+    // ---------- Navegación de páginas (barra inferior) ----------
+
+    private void UpdatePageNav(int total)
+    {
+        if (PageNavBar is null) return;
+        bool show = _images.Count > 0;
+        PageNavBar.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        if (!show) return;
+        total = Math.Max(1, total);
+        PageNavLabel.Text = $"Página {_currentPage + 1} de {total}";
+        NavFirst.IsEnabled = NavPrev.IsEnabled = _currentPage > 0;
+        NavNext.IsEnabled = NavLast.IsEnabled = _currentPage < total - 1;
+    }
+
+    private void OnNavFirst(object sender, RoutedEventArgs e) { _currentPage = 0; PageCanvas.Invalidate(); }
+    private void OnNavPrev(object sender, RoutedEventArgs e) { if (_currentPage > 0) _currentPage--; PageCanvas.Invalidate(); }
+    private void OnNavNext(object sender, RoutedEventArgs e) { _currentPage++; PageCanvas.Invalidate(); }
+    private void OnNavLast(object sender, RoutedEventArgs e) { _currentPage = int.MaxValue; PageCanvas.Invalidate(); }
 
     // ---------- Inspector en vivo (panel izquierdo) ----------
 

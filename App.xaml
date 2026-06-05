@@ -35,6 +35,8 @@
             <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource ColInputBg}" />
             <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource ColDanger}" />
             <SolidColorBrush x:Key="HoverBrush" Color="{StaticResource ColHover}" />
+            <!-- Rosa de la marca ("+") — .brand-plus del editor.css -->
+            <SolidColorBrush x:Key="BrandPlusBrush" Color="#FFE11D48" />
 
             <!-- ===== Botón de toolbar (.tb-btn) ===== -->
             <Style x:Key="ToolbarButton" TargetType="Button">
