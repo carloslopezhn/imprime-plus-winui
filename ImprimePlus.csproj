@@ -27,9 +27,9 @@
     <AssemblyName>ImprimePlus</AssemblyName>
     <!-- Icono embebido en el .exe (para accesos directos, asociaciones y Explorer). -->
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
-    <Version>2.2.2</Version>
-    <AssemblyVersion>2.2.2.0</AssemblyVersion>
-    <FileVersion>2.2.2.0</FileVersion>
+    <Version>2.2.3</Version>
+    <AssemblyVersion>2.2.3.0</AssemblyVersion>
+    <FileVersion>2.2.3.0</FileVersion>
   </PropertyGroup>
 
   <!-- FIX CRÍTICO: dotnet publish (WinUI 3 unpackaged) NO copia el PRI del app

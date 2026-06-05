@@ -27,7 +27,9 @@ public static class PresetService
     public static List<Preset> Builtin() => new()
     {
         new() { Id = "letter", Name = "Carta", Width = 21.59, Height = 27.94, Unit = "cm", Builtin = true },
-        new() { Id = "legal", Name = "Oficio", Width = 21.59, Height = 35.56, Unit = "cm", Builtin = true },
+        // Oficio (Folio/F4): 8.5 x 13 pulg.  Legal (US Legal): 8.5 x 14 pulg. Son distintos.
+        new() { Id = "oficio", Name = "Oficio", Width = 21.59, Height = 33.02, Unit = "cm", Builtin = true },
+        new() { Id = "legal", Name = "Legal", Width = 21.59, Height = 35.56, Unit = "cm", Builtin = true },
         new() { Id = "a4", Name = "A4", Width = 21.0, Height = 29.7, Unit = "cm", Builtin = true },
         new() { Id = "a5", Name = "A5", Width = 14.8, Height = 21.0, Unit = "cm", Builtin = true },
         new() { Id = "4x6", Name = "4x6 pulg", Width = 10.16, Height = 15.24, Unit = "cm", Builtin = true },

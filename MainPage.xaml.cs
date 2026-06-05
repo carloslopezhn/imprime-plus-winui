@@ -1659,8 +1659,9 @@ public sealed partial class MainPage : Page
     {
         try
         {
-            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(20) };
-            var json = await http.GetStringAsync("https://imprime.utp.hn/winui/winui-latest.json");
+            // Chequeo de versión: archivo diminuto → timeout corto.
+            using var check = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+            var json = await check.GetStringAsync("https://imprime.utp.hn/winui/winui-latest.json");
             var info = System.Text.Json.JsonSerializer.Deserialize<UpdateInfoDto>(json);
             var current = typeof(MainPage).Assembly.GetName().Version ?? new Version(0, 0);
             if (info is null || !Version.TryParse(info.Version, out var server) || server <= current)
@@ -1681,9 +1682,17 @@ public sealed partial class MainPage : Page
             if (await ask.ShowAsync() != ContentDialogResult.Primary) return;
 
             var url = info.Url.StartsWith("http") ? info.Url : "https://imprime.utp.hn" + info.Url;
-            var bytes = await http.GetByteArrayAsync(url);
+            // Descarga del instalador (decenas de MB): timeout largo y por streaming,
+            // si no, en conexiones normales expira (antes: 20 s para 77 MB → fallaba).
+            using var dl = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(15) };
             var tmp = Path.Combine(Path.GetTempPath(), "ImprimePlus-Setup.exe");
-            await File.WriteAllBytesAsync(tmp, bytes);
+            using (var resp = await dl.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead))
+            {
+                resp.EnsureSuccessStatusCode();
+                using var src = await resp.Content.ReadAsStreamAsync();
+                using var dst = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None);
+                await src.CopyToAsync(dst);
+            }
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(tmp) { UseShellExecute = true });
             Application.Current.Exit();
         }

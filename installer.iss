@@ -3,7 +3,7 @@
 ; "Imprimir con Imprime+" en imagenes.
 
 #define MyApp "Imprime+"
-#define MyVer "2.2.2"
+#define MyVer "2.2.3"
 #define MyExe "ImprimePlus.exe"
 
 [Setup]
@@ -18,7 +18,7 @@ DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#MyExe}
 UninstallDisplayName=Imprime+ {#MyVer}
 OutputDir=installer-out
-OutputBaseFilename=ImprimePlus-Setup
+OutputBaseFilename=ImprimePlus-Setup-{#MyVer}
 SetupIconFile=Assets\AppIcon.ico
 Compression=lzma2/max
 SolidCompression=yes
