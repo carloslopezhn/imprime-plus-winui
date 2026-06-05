@@ -398,11 +398,13 @@
                 </Grid.RowDefinitions>
                 <Grid Grid.Row="0">
                     <canvas:CanvasControl x:Name="PageCanvas" Draw="PageCanvas_Draw" ClearColor="#FFE8EDF3"
+                                          IsTabStop="True" UseSystemFocusVisuals="False"
                                           PointerWheelChanged="OnCanvasWheel"
                                           PointerPressed="OnCanvasPressed"
                                           PointerMoved="OnCanvasMoved"
                                           PointerReleased="OnCanvasReleased"
-                                          PointerExited="OnCanvasReleased" />
+                                          PointerExited="OnCanvasReleased"
+                                          KeyDown="OnCanvasKeyDown" />
                     <TextBlock x:Name="EmptyHint" Text="Arrastra imágenes aquí — o usa Agregar / Pegar / Comprimido"
                                VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,12"
                                FontSize="12" Foreground="{StaticResource TextMutedBrush}" IsHitTestVisible="False" />
@@ -480,11 +482,11 @@
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" Spacing="3">
                                             <TextBlock Text="Offset X" Style="{StaticResource FieldLabel}" />
-                                            <Slider x:Name="InsOffsetX" Minimum="-50" Maximum="50" Value="0" ValueChanged="OnInsOffsetChanged" />
+                                            <Slider x:Name="InsOffsetX" Minimum="-200" Maximum="200" Value="0" ValueChanged="OnInsOffsetChanged" />
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" Spacing="3">
                                             <TextBlock Text="Offset Y" Style="{StaticResource FieldLabel}" />
-                                            <Slider x:Name="InsOffsetY" Minimum="-50" Maximum="50" Value="0" ValueChanged="OnInsOffsetChanged" />
+                                            <Slider x:Name="InsOffsetY" Minimum="-200" Maximum="200" Value="0" ValueChanged="OnInsOffsetChanged" />
                                         </StackPanel>
                                     </Grid>
                                     <Grid ColumnSpacing="8">

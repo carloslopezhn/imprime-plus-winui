@@ -446,6 +446,8 @@ public sealed partial class MainPage : Page
         var p = e.GetCurrentPoint(PageCanvas);
         _lastPointer = p.Position;
         bool ctrl = e.KeyModifiers.HasFlag(VirtualKeyModifiers.Control);
+        // Tomar foco de teclado para que las flechas muevan la imagen seleccionada.
+        PageCanvas.Focus(FocusState.Pointer);
 
         if (p.Properties.IsRightButtonPressed)
         {
@@ -517,14 +519,53 @@ public sealed partial class MainPage : Page
         if (_maybeDrag)
         {
             var pos = e.GetCurrentPoint(PageCanvas).Position;
-            if (!_dragging && Math.Abs(pos.X - _dragStart.X) + Math.Abs(pos.Y - _dragStart.Y) > 8) _dragging = true;
+            if (!_dragging && Math.Abs(pos.X - _dragStart.X) + Math.Abs(pos.Y - _dragStart.Y) > 8)
+            {
+                _dragging = true;
+                _lastPointer = pos; // arrancar el delta interno desde aquí
+            }
             if (_dragging)
             {
                 var t = HitTest(pos);
-                _dragTarget = (t != _dragImage) ? t : null;
+                if (t == _dragImage && _dragImage is not null)
+                {
+                    // Arrastre DENTRO de la propia celda → mover la imagen internamente.
+                    var span = CurrentSpanScreen(_dragImage);
+                    if (span is { } sp && sp.w > 0 && sp.h > 0)
+                    {
+                        double dx = pos.X - _lastPointer.X;
+                        double dy = pos.Y - _lastPointer.Y;
+                        _dragImage.OffsetX = Math.Clamp(_dragImage.OffsetX + dx / sp.w, -2.0, 2.0);
+                        _dragImage.OffsetY = Math.Clamp(_dragImage.OffsetY + dy / sp.h, -2.0, 2.0);
+                        UpdateInspector();
+                    }
+                    _dragTarget = null;
+                }
+                else
+                {
+                    // Arrastre a OTRA celda → reordenar (intercambiar posición).
+                    _dragTarget = (t != _dragImage) ? t : null;
+                }
+                _lastPointer = pos;
                 PageCanvas.Invalidate();
             }
         }
+    }
+
+    // Tamaño en pantalla (px) de la celda/span donde se dibuja una imagen.
+    private (double w, double h)? CurrentSpanScreen(EditorImage img)
+    {
+        if (_lastLayout is null) return null;
+        var L = _lastLayout;
+        foreach (var page in _lastPages)
+            foreach (var pl in page)
+                if (pl.Image.Id == img.Id)
+                {
+                    double spanW = pl.ColSpan * L.CellW + (pl.ColSpan - 1) * L.SpacingH;
+                    double spanH = pl.RowSpan * L.CellH + (pl.RowSpan - 1) * L.SpacingV;
+                    return (spanW * _lastScale, spanH * _lastScale);
+                }
+        return null;
     }
 
     private void OnCanvasReleased(object sender, PointerRoutedEventArgs e)
@@ -553,6 +594,35 @@ public sealed partial class MainPage : Page
         if (ti < 0) ti = _images.Count;
         _images.Insert(ti, src);
         UpdateChrome();
+    }
+
+    // Flechas del teclado: mover internamente la imagen seleccionada (paso fino,
+    // Shift = paso grande). Como la rueda hace zoom interno, esto cierra el control
+    // completo de posición de la foto dentro de su celda.
+    private void OnCanvasKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (_selected.Count == 0) return;
+        bool shift = (Microsoft.UI.Input.InputKeyboardSource
+            .GetKeyStateForCurrentThread(VirtualKey.Shift)
+            & Windows.UI.Core.CoreVirtualKeyStates.Down) == Windows.UI.Core.CoreVirtualKeyStates.Down;
+        double step = shift ? 0.05 : 0.01;
+        double dx = 0, dy = 0;
+        switch (e.Key)
+        {
+            case VirtualKey.Left:  dx = -step; break;
+            case VirtualKey.Right: dx =  step; break;
+            case VirtualKey.Up:    dy = -step; break;
+            case VirtualKey.Down:  dy =  step; break;
+            default: return;
+        }
+        foreach (var img in _selected)
+        {
+            img.OffsetX = Math.Clamp(img.OffsetX + dx, -2.0, 2.0);
+            img.OffsetY = Math.Clamp(img.OffsetY + dy, -2.0, 2.0);
+        }
+        UpdateInspector();
+        PageCanvas.Invalidate();
+        e.Handled = true;
     }
 
     // ---------- Menú contextual ----------
@@ -1501,6 +1571,10 @@ public sealed partial class MainPage : Page
             using var doc = new System.Drawing.Printing.PrintDocument { DocumentName = "Imprime+" };
             doc.PrinterSettings.PrinterName = printer;
             doc.DefaultPageSettings.Margins = new System.Drawing.Printing.Margins(0, 0, 0, 0);
+            // Orientación: si la página es más ancha que alta, pedir al driver horizontal
+            // (apaisado). Así la impresora detecta y rota el papel según la config de página.
+            var plLayout = LayoutEngine.ComputeLayout(_config);
+            doc.DefaultPageSettings.Landscape = plLayout.PageW > plLayout.PageH;
             int idx = 0;
             doc.PrintPage += (s, ev) =>
             {
