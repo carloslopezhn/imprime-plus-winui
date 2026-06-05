@@ -261,11 +261,11 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Spacing="3">
                                         <TextBlock Text="Espacio H (cm)" Style="{StaticResource FieldLabel}" />
-                                        <TextBox x:Name="SpacingHBox" Text="0.3" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
+                                        <TextBox x:Name="SpacingHBox" Text="0" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Spacing="3">
                                         <TextBlock Text="Espacio V (cm)" Style="{StaticResource FieldLabel}" />
-                                        <TextBox x:Name="SpacingVBox" Text="0.3" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
+                                        <TextBox x:Name="SpacingVBox" Text="0" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
                                     </StackPanel>
                                 </Grid>
 
@@ -351,7 +351,7 @@
                                     <ComboBoxItem Content="Fuerte" />
                                 </ComboBox>
                                 <TextBlock Text="Ajuste" Style="{StaticResource FieldLabel}" />
-                                <ComboBox x:Name="GFit" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="OnGlobalChanged">
+                                <ComboBox x:Name="GFit" HorizontalAlignment="Stretch" SelectedIndex="1" SelectionChanged="OnGlobalChanged">
                                     <ComboBoxItem Content="Cubrir (recortar)" />
                                     <ComboBoxItem Content="Contener (completa)" />
                                     <ComboBoxItem Content="Estirar" />
@@ -378,7 +378,7 @@
                                     <ComboBoxItem Content="Justificado" />
                                 </ComboBox>
                                 <TextBlock Text="Alineación vertical" Style="{StaticResource FieldLabel}" />
-                                <ComboBox x:Name="GAlignV" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="OnGlobalChanged">
+                                <ComboBox x:Name="GAlignV" HorizontalAlignment="Stretch" SelectedIndex="1" SelectionChanged="OnGlobalChanged">
                                     <ComboBoxItem Content="Arriba" />
                                     <ComboBoxItem Content="Centro" />
                                     <ComboBoxItem Content="Abajo" />

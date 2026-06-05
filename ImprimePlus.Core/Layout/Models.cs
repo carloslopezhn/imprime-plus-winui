@@ -46,6 +46,9 @@ public sealed class LayoutConfig
     public double ImgWidth { get; set; }
     public double ImgHeight { get; set; }
 
+    /// <summary>Versión del esquema de settings (para migraciones). 0 = previo a v2.2.8.</summary>
+    public int SchemaVersion { get; set; }
+
     // --- Preferencias de impresión (persistidas en settings.json) ---
     /// <summary>Mostrar la vista previa propia de la app antes de imprimir.</summary>
     public bool ShowPrintPreview { get; set; } = true;

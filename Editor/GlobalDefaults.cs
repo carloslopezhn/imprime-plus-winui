@@ -21,10 +21,10 @@ public sealed class GlobalDefaults
     public Color BorderColor { get; set; } = Colors.Black;
     public double CornerRadius { get; set; } = 0;
     public ShadowStrength Shadow { get; set; } = ShadowStrength.None;
-    public FitMode Fit { get; set; } = FitMode.Cover;
+    public FitMode Fit { get; set; } = FitMode.Contain; // por default NO recorta (entra completa)
     public Color CellBg { get; set; } = Colors.Transparent;
     public AlignH AlignH { get; set; } = AlignH.Center;
-    public AlignV AlignV { get; set; } = AlignV.Top;
+    public AlignV AlignV { get; set; } = AlignV.Center; // centrada en la celda (con Contener)
 
     public bool CutGuides { get; set; } = false; // toggle "Guías de corte" (G5)
 

@@ -41,14 +41,15 @@ public sealed partial class MainPage : Page
         Unit = Units.Cm,
         PageWidth = 21.59,
         PageHeight = 27.94,
-        SpacingH = 0.3,
-        SpacingV = 0.3,
+        SpacingH = 0,
+        SpacingV = 0,
         LayoutMode = LayoutModes.Grid,
         GridRows = 3,
         GridCols = 3,
         CountPerPage = 9,
         ImgWidth = 5,
         ImgHeight = 5,
+        SchemaVersion = 1,
     };
 
     // Estado de vista (zoom de usuario + pan en DIPs de pantalla).
@@ -122,7 +123,19 @@ public sealed partial class MainPage : Page
         // Cargar config persistida y reflejarla en el panel izquierdo (con _ready=false
         // para que setear los controles no dispare guardados redundantes).
         var saved = SettingsStore.Load();
-        if (saved is not null) _config = saved;
+        if (saved is not null)
+        {
+            // Migración v2.2.8: el espacio H/V por default pasó de 0.3 a 0.
+            // Sólo se reemplaza el viejo default (0.3); valores elegidos a propósito se respetan.
+            if (saved.SchemaVersion < 1)
+            {
+                if (Math.Abs(saved.SpacingH - 0.3) < 0.001) saved.SpacingH = 0;
+                if (Math.Abs(saved.SpacingV - 0.3) < 0.001) saved.SpacingV = 0;
+                saved.SchemaVersion = 1;
+                SettingsStore.Save(saved);
+            }
+            _config = saved;
+        }
         SyncLeftPanelFromConfig();
         UpdatePageSummary();
         PopulatePrinters();
@@ -1274,11 +1287,31 @@ public sealed partial class MainPage : Page
         PageCanvas.Invalidate();
     }
 
+    // Margen por default al activarse, según unidad: 0.5 cm / 0.4 pulg / 5 mm.
+    private double DefaultMargin() => _config.Unit switch
+    {
+        Units.In => 0.4,
+        Units.Mm => 5.0,
+        _ => 0.5,
+    };
+
     private void OnMarginsToggled(object sender, RoutedEventArgs e)
     {
         if (!_ready) return;
         MarginsPanel.Visibility = MarginsToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
-        if (MarginsToggle.IsOn) ApplyMargins();
+        if (MarginsToggle.IsOn)
+        {
+            // Si se activan sin un valor previo, usar el default según la unidad.
+            bool empty = _config.MarginTop <= 0 && _config.MarginBottom <= 0
+                      && _config.MarginLeft <= 0 && _config.MarginRight <= 0;
+            if (empty)
+            {
+                var inv = CultureInfo.InvariantCulture;
+                string d = DefaultMargin().ToString("0.##", inv);
+                MarginTopBox.Text = MarginBottomBox.Text = MarginLeftBox.Text = MarginRightBox.Text = d;
+            }
+            ApplyMargins();
+        }
         else _config.MarginTop = _config.MarginRight = _config.MarginBottom = _config.MarginLeft = 0;
         SettingsStore.Save(_config);
         PageCanvas.Invalidate();
@@ -2106,7 +2139,11 @@ public sealed partial class MainPage : Page
     private async void OnExportPdf(object sender, RoutedEventArgs e)
     {
         if (_images.Count == 0) return;
-        var picker = new FileSavePicker { SuggestedFileName = "Imprime+" };
+        // Nombre sugerido con páginas + fecha + hora: Imprime+-3paginas-2026-06-05-13-45
+        int npages = ComputePrintPageCount();
+        var now = DateTime.Now;
+        string suggested = $"Imprime+-{npages}paginas-{now:yyyy-MM-dd}-{now:HH-mm}";
+        var picker = new FileSavePicker { SuggestedFileName = suggested };
         picker.FileTypeChoices.Add("PDF", new List<string> { ".pdf" });
         WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
         var file = await picker.PickSaveFileAsync();
