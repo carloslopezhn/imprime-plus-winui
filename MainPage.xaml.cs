@@ -12,6 +12,7 @@ using Microsoft.Graphics.Canvas.Printing;
 using Microsoft.Graphics.Canvas.UI;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 using Windows.Foundation;
+using Windows.Graphics.DirectX;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
@@ -209,6 +210,16 @@ public sealed partial class MainPage : Page
             _selected.Clear(); _selected.Add(_images[0]);
             PosterToggle.IsOn = true; // dispara OnPosterToggled
             sender.Invalidate();
+        }
+
+        // Test de quita-fondo headless: recorta la imagen 0 y la compone sobre magenta.
+        if (Environment.GetEnvironmentVariable("IMPRIME_DEV_BGTEST") == "1" && _images.Count > 0)
+        {
+            var cut = await RemoveBgCoreAsync(_images[0]);
+            int w = (int)cut.SizeInPixels.Width, h = (int)cut.SizeInPixels.Height;
+            using var rt = new CanvasRenderTarget(sender, w, h, 96);
+            using (var ds = rt.CreateDrawingSession()) { ds.Clear(Colors.Magenta); ds.DrawImage(cut); }
+            await rt.SaveAsync(Path.Combine(AppContext.BaseDirectory, "_shot_bg.png"), CanvasBitmapFileFormat.Png);
         }
     }
 
@@ -858,6 +869,61 @@ public sealed partial class MainPage : Page
     }
 
     private void OnInsRotate(object sender, RoutedEventArgs e) => RotateSelected();
+
+    private BgRemover? _bg;
+
+    private async void OnRemoveBg(object sender, RoutedEventArgs e)
+    {
+        var img = Primary;
+        if (img is null) return;
+        try
+        {
+            await RemoveBgCoreAsync(img);
+            PageCanvas.Invalidate();
+        }
+        catch (Exception ex)
+        {
+            await ShowInfo("Quitar fondo", ex.Message);
+        }
+    }
+
+    private async Task<CanvasBitmap> RemoveBgCoreAsync(EditorImage img)
+    {
+        var full = img.Bitmap;
+        int w = (int)full.SizeInPixels.Width, h = (int)full.SizeInPixels.Height;
+        byte[] fullBgra = full.GetPixelBytes();
+
+        byte[] in320;
+        using (var rt = new CanvasRenderTarget(PageCanvas.Device, 320, 320, 96))
+        {
+            using (var ds = rt.CreateDrawingSession())
+            {
+                ds.Clear(Colors.Black);
+                ds.DrawImage(full, new Rect(0, 0, 320, 320));
+            }
+            in320 = rt.GetPixelBytes();
+        }
+
+        var modelPath = Path.Combine(AppContext.BaseDirectory, "Models", "u2netp.onnx");
+        _bg ??= new BgRemover(modelPath);
+        byte[] outBgra = await Task.Run(() => _bg.Run(fullBgra, w, h, in320));
+
+        var cut = CanvasBitmap.CreateFromBytes(PageCanvas.Device, outBgra, w, h,
+            DirectXPixelFormat.B8G8R8A8UIntNormalized, 96, Microsoft.Graphics.Canvas.CanvasAlphaMode.Premultiplied);
+        img.Bitmap = cut;
+
+        // Guardar PNG con alfa para recargar en device-lost.
+        using var ras = new InMemoryRandomAccessStream();
+        await cut.SaveAsync(ras, CanvasBitmapFileFormat.Png);
+        ras.Seek(0);
+        using var net = ras.AsStreamForRead();
+        using var ms = new MemoryStream();
+        await net.CopyToAsync(ms);
+        img.SourcePath = null;
+        img.SourceBytes = ms.ToArray();
+
+        return cut;
+    }
 
     private void OnInsShapeChanged(object sender, SelectionChangedEventArgs e)
     {

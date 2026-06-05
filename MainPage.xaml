@@ -332,6 +332,7 @@
                                     <Slider x:Name="InsZoom" Minimum="20" Maximum="300" Value="100"
                                             ValueChanged="OnInsZoomChanged" />
                                     <Button Content="Rotar 90°" HorizontalAlignment="Stretch" Click="OnInsRotate" />
+                                    <Button Content="Quitar fondo" HorizontalAlignment="Stretch" Click="OnRemoveBg" />
                                 </StackPanel>
 
                                 <!-- Forma y borde -->

@@ -50,8 +50,8 @@ public enum ShadowStrength
 public sealed class EditorImage
 {
     public string Id { get; }
-    public string? SourcePath { get; init; }
-    public byte[]? SourceBytes { get; init; }   // origen sin archivo (portapapeles, comprimido)
+    public string? SourcePath { get; set; }
+    public byte[]? SourceBytes { get; set; }   // origen sin archivo (portapapeles, comprimido, recorte)
     public CanvasBitmap Bitmap { get; set; }
 
     // Overrides de layout (spans) — los lee el motor.
