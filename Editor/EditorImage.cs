@@ -20,6 +20,7 @@ public sealed class EditorImage
 {
     public string Id { get; }
     public string? SourcePath { get; init; }
+    public byte[]? SourceBytes { get; init; }   // origen sin archivo (portapapeles, comprimido)
     public CanvasBitmap Bitmap { get; set; }
 
     // Overrides de layout (spans) — los lee el motor.

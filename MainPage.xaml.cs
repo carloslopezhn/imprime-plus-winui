@@ -10,6 +10,7 @@ using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.UI;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 using Windows.Foundation;
+using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.System;
 using Windows.UI;
@@ -67,6 +68,12 @@ public sealed partial class MainPage : Page
         // (y de nuevo si se pierde el device). Es el momento correcto: en Loaded
         // el CanvasControl aún no tiene device.
         PageCanvas.CreateResources += OnCreateResources;
+
+        // Ctrl+V para pegar imágenes del portapapeles.
+        var paste = new KeyboardAccelerator { Key = VirtualKey.V, Modifiers = VirtualKeyModifiers.Control };
+        paste.Invoked += async (_, args) => { args.Handled = true; await PasteAsync(); };
+        KeyboardAccelerators.Add(paste);
+
         _ready = true; // a partir de aquí los eventos del inspector ya son del usuario
     }
 
@@ -83,27 +90,24 @@ public sealed partial class MainPage : Page
             var dir = Path.Combine(AppContext.BaseDirectory, "_sample");
             if (Directory.Exists(dir))
             {
-                var exts = new[] { ".jpg", ".jpeg", ".png", ".bmp", ".webp" };
                 var files = Directory.GetFiles(dir)
-                    .Where(f => exts.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                    .Where(f => ImageLoader.IsImage(f) || Archives.IsArchive(f))
                     .OrderBy(f => f).ToList();
-                foreach (var f in files)
-                {
-                    try
-                    {
-                        var bmp = await CanvasBitmap.LoadAsync(sender, f);
-                        _images.Add(new EditorImage($"img{++_idSeq}", bmp) { SourcePath = f });
-                    }
-                    catch { }
-                }
+                await AddPathsAsync(sender, files);
             }
         }
         else
         {
-            // Device-lost: recargar los bitmaps que tengan ruta de origen.
-            foreach (var img in _images.Where(i => i.SourcePath is not null))
+            // Device-lost: recargar los bitmaps desde su origen (ruta o bytes).
+            foreach (var img in _images)
             {
-                try { img.Bitmap = await CanvasBitmap.LoadAsync(sender, img.SourcePath); }
+                try
+                {
+                    if (img.SourcePath is not null)
+                        img.Bitmap = (await ImageLoader.LoadFromFileAsync(sender, img.SourcePath)) ?? img.Bitmap;
+                    else if (img.SourceBytes is not null)
+                        img.Bitmap = (await ImageLoader.LoadFromBytesAsync(sender, img.SourceBytes)) ?? img.Bitmap;
+                }
                 catch { }
             }
         }
@@ -119,7 +123,7 @@ public sealed partial class MainPage : Page
         }
     }
 
-    // ---------- Carga de imágenes ----------
+    // ---------- Carga de imágenes (archivo / comprimido / bytes) ----------
 
     private async void OnAddImages(object sender, RoutedEventArgs e)
     {
@@ -128,33 +132,118 @@ public sealed partial class MainPage : Page
             ViewMode = PickerViewMode.Thumbnail,
             SuggestedStartLocation = PickerLocationId.PicturesLibrary,
         };
-        foreach (var ext in new[] { ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".gif", ".tiff" })
+        foreach (var ext in ImageLoader.ImageExts) picker.FileTypeFilter.Add(ext);
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
+
+        var files = await picker.PickMultipleFilesAsync();
+        if (files is { Count: > 0 })
+            await AddPathsAsync(PageCanvas, files.Select(f => f.Path));
+    }
+
+    private async void OnAddArchive(object sender, RoutedEventArgs e)
+    {
+        var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.Downloads };
+        foreach (var ext in new[] { ".zip", ".rar", ".7z", ".tar", ".gz", ".tgz", ".bz2", ".xz" })
             picker.FileTypeFilter.Add(ext);
         WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
 
         var files = await picker.PickMultipleFilesAsync();
         if (files is { Count: > 0 })
-            await LoadFiles(files.Select(f => f.Path).ToList());
+            await AddPathsAsync(PageCanvas, files.Select(f => f.Path));
     }
 
-    private async Task LoadFiles(IReadOnlyList<string> paths)
+    /// <summary>Agrega imágenes desde rutas (imágenes sueltas y/o comprimidos).</summary>
+    private async Task AddPathsAsync(ICanvasResourceCreator rc, IEnumerable<string> paths)
     {
         int added = 0;
         foreach (var path in paths)
         {
-            try
+            if (Archives.IsArchive(path))
             {
-                var bmp = await CanvasBitmap.LoadAsync(PageCanvas, path);
-                _images.Add(new EditorImage($"img{++_idSeq}", bmp) { SourcePath = path });
-                added++;
+                foreach (var (name, data) in Archives.ExtractImages(path))
+                {
+                    var bmp = await ImageLoader.LoadFromBytesAsync(rc, data);
+                    if (bmp is not null)
+                    {
+                        _images.Add(new EditorImage($"img{++_idSeq}", bmp) { SourcePath = null, SourceBytes = data });
+                        added++;
+                    }
+                }
             }
-            catch { /* archivo no decodificable: ignorar por ahora */ }
+            else if (ImageLoader.IsImage(path))
+            {
+                var bmp = await ImageLoader.LoadFromFileAsync(rc, path);
+                if (bmp is not null)
+                {
+                    _images.Add(new EditorImage($"img{++_idSeq}", bmp) { SourcePath = path });
+                    added++;
+                }
+            }
         }
-        if (added > 0)
+        if (added > 0) { UpdateChrome(); PageCanvas.Invalidate(); }
+    }
+
+    private async Task AddBytesAsync(ICanvasResourceCreator rc, byte[] data)
+    {
+        var bmp = await ImageLoader.LoadFromBytesAsync(rc, data);
+        if (bmp is not null)
         {
+            _images.Add(new EditorImage($"img{++_idSeq}", bmp) { SourcePath = null, SourceBytes = data });
             UpdateChrome();
             PageCanvas.Invalidate();
         }
+    }
+
+    // ---------- Pegar (Ctrl+V / botón) ----------
+
+    private async void OnPaste(object sender, RoutedEventArgs e) => await PasteAsync();
+
+    private async Task PasteAsync()
+    {
+        try
+        {
+            var view = Windows.ApplicationModel.DataTransfer.Clipboard.GetContent();
+            if (view.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+            {
+                var items = await view.GetStorageItemsAsync();
+                await AddPathsAsync(PageCanvas, items.OfType<StorageFile>().Select(f => f.Path));
+            }
+            else if (view.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.Bitmap))
+            {
+                var streamRef = await view.GetBitmapAsync();
+                using var stream = await streamRef.OpenReadAsync();
+                using var net = stream.AsStreamForRead();
+                using var ms = new MemoryStream();
+                await net.CopyToAsync(ms);
+                await AddBytesAsync(PageCanvas, ms.ToArray());
+            }
+        }
+        catch { /* portapapeles sin imagen */ }
+    }
+
+    // ---------- Drag & drop ----------
+
+    private void OnCanvasDragOver(object sender, DragEventArgs e)
+    {
+        if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+        {
+            e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+            e.DragUIOverride.Caption = "Agregar a Imprime+";
+            e.DragUIOverride.IsCaptionVisible = true;
+            e.DragUIOverride.IsContentVisible = true;
+        }
+    }
+
+    private async void OnCanvasDrop(object sender, DragEventArgs e)
+    {
+        if (!e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems)) return;
+        var def = e.GetDeferral();
+        try
+        {
+            var items = await e.DataView.GetStorageItemsAsync();
+            await AddPathsAsync(PageCanvas, items.OfType<StorageFile>().Select(f => f.Path));
+        }
+        finally { def.Complete(); }
     }
 
     // ---------- Toolbar ----------
