@@ -45,6 +45,12 @@ public sealed class LayoutConfig
 
     public double ImgWidth { get; set; }
     public double ImgHeight { get; set; }
+
+    // --- Preferencias de impresión (persistidas en settings.json) ---
+    /// <summary>Mostrar la vista previa propia de la app antes de imprimir.</summary>
+    public bool ShowPrintPreview { get; set; } = true;
+    /// <summary>"printable" = ajustar al área imprimible (no recorta); "actual" = tamaño real 1:1.</summary>
+    public string PrintFit { get; set; } = "printable";
 }
 
 /// <summary>Overrides por imagen relevantes para paginación (resto en fases posteriores).</summary>

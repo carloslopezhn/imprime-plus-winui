@@ -97,7 +97,7 @@
                                 <TextBlock Text="PDF" />
                             </StackPanel>
                         </Button>
-                        <Button Style="{StaticResource ToolbarPrimaryButton}" ToolTipService.ToolTip="Imprimir todas las páginas"
+                        <Button x:Name="PrintBtn" Style="{StaticResource ToolbarPrimaryButton}" ToolTipService.ToolTip="Imprimir todas las páginas"
                                 Click="OnPrint">
                             <StackPanel Orientation="Horizontal" Spacing="5">
                                 <FontIcon Glyph="&#xF501;" FontSize="14" />
@@ -399,11 +399,13 @@
                 <Grid Grid.Row="0">
                     <canvas:CanvasControl x:Name="PageCanvas" Draw="PageCanvas_Draw" ClearColor="#FFE8EDF3"
                                           IsTabStop="True" UseSystemFocusVisuals="False"
+                                          IsDoubleTapEnabled="True"
                                           PointerWheelChanged="OnCanvasWheel"
                                           PointerPressed="OnCanvasPressed"
                                           PointerMoved="OnCanvasMoved"
                                           PointerReleased="OnCanvasReleased"
                                           PointerExited="OnCanvasReleased"
+                                          DoubleTapped="OnCanvasDoubleTapped"
                                           KeyDown="OnCanvasKeyDown" />
                     <TextBlock x:Name="EmptyHint" Text="Arrastra imágenes aquí — o usa Agregar / Pegar / Comprimido"
                                VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,12"

@@ -68,6 +68,9 @@ public sealed partial class MainPage : Page
     private EditorImage? _dragImage, _dragTarget;
     private Point _dragStart;
 
+    // Guardia de impresión (evita doble-click → doble trabajo).
+    private bool _printing;
+
     private int _idSeq;
 
     // Modo póster: 1 imagen dividida en _posterCols x _posterRows páginas.
@@ -550,6 +553,14 @@ public sealed partial class MainPage : Page
                 PageCanvas.Invalidate();
             }
         }
+    }
+
+    // S4: doble-click en una celda vacía / área libre → agregar imágenes.
+    private void OnCanvasDoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
+    {
+        var pos = e.GetPosition(PageCanvas);
+        if (HitTest(pos) is null)
+            OnAddImages(this, new RoutedEventArgs());
     }
 
     // Tamaño en pantalla (px) de la celda/span donde se dibuja una imagen.
@@ -1068,6 +1079,16 @@ public sealed partial class MainPage : Page
         var oriRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
         oriRow.Children.Add(rbPortrait); oriRow.Children.Add(rbLandscape);
         panel.Children.Add(oriRow);
+
+        // --- Impresión (S2b/S3): ajuste al papel + vista previa ---
+        panel.Children.Add(new TextBlock { Text = "Impresión", FontSize = 12, Margin = new Thickness(0, 6, 0, 0) });
+        var fitCombo = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
+        fitCombo.Items.Add("Ajustar al área imprimible (recomendado)");
+        fitCombo.Items.Add("Tamaño real (1:1)");
+        fitCombo.SelectedIndex = _config.PrintFit == "actual" ? 1 : 0;
+        panel.Children.Add(fitCombo);
+        var previewSwitch = new ToggleSwitch { Header = "Vista previa antes de imprimir", IsOn = _config.ShowPrintPreview };
+        panel.Children.Add(previewSwitch);
         panel.Children.Add(new TextBlock { Text = "Guardar como preset", FontSize = 12, Margin = new Thickness(0, 6, 0, 0) });
         var saveRow = new Grid { ColumnSpacing = 6 };
         saveRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -1091,6 +1112,8 @@ public sealed partial class MainPage : Page
             _config.Unit = UnitOf();
             _config.PageWidth = Math.Max(1, ParseD(wBox.Text, _config.PageWidth));
             _config.PageHeight = Math.Max(1, ParseD(hBox.Text, _config.PageHeight));
+            _config.PrintFit = fitCombo.SelectedIndex == 1 ? "actual" : "printable";
+            _config.ShowPrintPreview = previewSwitch.IsOn;
             if (presetCombo.SelectedItem is Preset sp) _pageName = sp.Name;
             else _pageName = "Personalizado";
             SettingsStore.Save(_config);
@@ -1554,44 +1577,200 @@ public sealed partial class MainPage : Page
 
     private async void OnPrint(object sender, RoutedEventArgs e)
     {
+        if (_printing) return;                 // S1: anti doble-click (un solo trabajo)
         if (_images.Count == 0) return;
         var printer = SelectedPrinter;
         if (string.IsNullOrEmpty(printer)) { await ShowInfo("Imprimir", "No hay impresora seleccionada."); return; }
+
+        _printing = true;
+        if (PrintBtn is not null) PrintBtn.IsEnabled = false;
         try
         {
             int total = ComputePrintPageCount();
-            // Render de cada página a bitmap 300 DPI; GDI los imprime directo a la impresora elegida.
-            var pages = new List<System.Drawing.Bitmap>();
+            // Render de cada página a JPEG 300 DPI (sirve para la preview y para imprimir).
+            var jpegs = new List<byte[]>(total);
             for (int p = 1; p <= total; p++)
+                jpegs.Add(await RenderPageJpegAsync(p, 300));
+
+            // S3: vista previa propia (siempre que esté activada), independiente del driver.
+            if (_config.ShowPrintPreview)
             {
-                byte[] png = await RenderPageJpegAsync(p, 300);
-                pages.Add(new System.Drawing.Bitmap(new MemoryStream(png)));
+                bool go = await ShowPrintPreviewAsync(jpegs);
+                if (!go) return;
             }
+
+            PrintJpegs(printer, jpegs);
+        }
+        catch (Exception ex) { await ShowInfo("Imprimir", "No se pudo imprimir: " + ex.Message); }
+        finally
+        {
+            _printing = false;
+            if (PrintBtn is not null) PrintBtn.IsEnabled = true;
+        }
+    }
+
+    /// <summary>
+    /// Imprime los JPEG ya renderizados respetando: papel = preset (S2a) y el
+    /// ÁREA IMPRIMIBLE real de la impresora (S2b). Política A "printable" = ajustar
+    /// (nunca recorta); Política B "actual" = tamaño real 1:1 (la franja no
+    /// imprimible la recorta la impresora).
+    /// </summary>
+    private void PrintJpegs(string printer, List<byte[]> jpegs)
+    {
+        var pages = jpegs.Select(b => new System.Drawing.Bitmap(new MemoryStream(b))).ToList();
+        try
+        {
+            var layout = LayoutEngine.ComputeLayout(_config);
+            double pageW100 = layout.PageW / 96.0 * 100.0; // página en centésimas de pulgada
+            double pageH100 = layout.PageH / 96.0 * 100.0;
+            bool landscape = pageW100 > pageH100;
+            bool fitPrintable = _config.PrintFit != "actual";
 
             using var doc = new System.Drawing.Printing.PrintDocument { DocumentName = "Imprime+" };
             doc.PrinterSettings.PrinterName = printer;
+            doc.OriginAtMargins = false; // origen del Graphics en la esquina del área imprimible
             doc.DefaultPageSettings.Margins = new System.Drawing.Printing.Margins(0, 0, 0, 0);
-            // Orientación: si la página es más ancha que alta, pedir al driver horizontal
-            // (apaisado). Así la impresora detecta y rota el papel según la config de página.
-            var plLayout = LayoutEngine.ComputeLayout(_config);
-            doc.DefaultPageSettings.Landscape = plLayout.PageW > plLayout.PageH;
+            doc.DefaultPageSettings.Landscape = landscape;
+            // S2a: fijar el papel = preset (estándar coincidente o tamaño personalizado).
+            int paperW = (int)Math.Round(landscape ? pageH100 : pageW100); // dims en vertical
+            int paperH = (int)Math.Round(landscape ? pageW100 : pageH100);
+            doc.DefaultPageSettings.PaperSize = MatchPaperSize(doc.PrinterSettings, paperW, paperH);
+
             int idx = 0;
             doc.PrintPage += (s, ev) =>
             {
                 var bmp = pages[idx];
-                var pb = ev.PageBounds; // 1/100"
-                double sc = Math.Min((double)pb.Width / bmp.Width, (double)pb.Height / bmp.Height);
-                int w = (int)(bmp.Width * sc), h = (int)(bmp.Height * sc);
-                int x = pb.X + (pb.Width - w) / 2, y = pb.Y + (pb.Height - h) / 2;
-                ev.Graphics!.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                ev.Graphics.DrawImage(bmp, new System.Drawing.Rectangle(x, y, w, h));
+                var g = ev.Graphics!;
+                g.PageUnit = System.Drawing.GraphicsUnit.Display; // 1/100"
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+
+                // Área imprimible real (ya orientada). Anclamos a su origen real
+                // (printable.X/Y) para ser robustos entre drivers.
+                var printable = g.VisibleClipBounds; // 1/100"
+                double availW = printable.Width, availH = printable.Height;
+                double bw = pageW100, bh = pageH100; // el bitmap ES la página completa, ya orientada
+
+                if (fitPrintable)
+                {
+                    // Política A: ajustar la página dentro del área imprimible (no recorta).
+                    double sc = Math.Min(availW / bw, availH / bh);
+                    float dw = (float)(bw * sc), dh = (float)(bh * sc);
+                    float dx = (float)(printable.X + (availW - dw) / 2.0);
+                    float dy = (float)(printable.Y + (availH - dh) / 2.0);
+                    g.DrawImage(bmp, dx, dy, dw, dh);
+                }
+                else
+                {
+                    // Política B: tamaño real 1:1, centrado en la hoja. Como la página es
+                    // del tamaño del papel, desborda simétricamente y la impresora recorta
+                    // su franja no imprimible (mínima).
+                    float dx = (float)(printable.X + (availW - bw) / 2.0);
+                    float dy = (float)(printable.Y + (availH - bh) / 2.0);
+                    g.DrawImage(bmp, dx, dy, (float)bw, (float)bh);
+                }
                 idx++;
                 ev.HasMorePages = idx < pages.Count;
             };
             doc.Print();
+        }
+        finally
+        {
             foreach (var b in pages) b.Dispose();
         }
-        catch (Exception ex) { await ShowInfo("Imprimir", "No se pudo imprimir: " + ex.Message); }
+    }
+
+    /// <summary>Busca el papel estándar que coincide (±0.03") o crea uno personalizado.</summary>
+    private static System.Drawing.Printing.PaperSize MatchPaperSize(
+        System.Drawing.Printing.PrinterSettings ps, int w100, int h100)
+    {
+        foreach (System.Drawing.Printing.PaperSize cand in ps.PaperSizes)
+            if (Math.Abs(cand.Width - w100) <= 3 && Math.Abs(cand.Height - h100) <= 3)
+                return cand;
+        return new System.Drawing.Printing.PaperSize($"Imprime+ {w100}x{h100}", w100, h100);
+    }
+
+    /// <summary>S3: vista previa propia (independiente del driver). Devuelve true si imprimir.</summary>
+    private async Task<bool> ShowPrintPreviewAsync(List<byte[]> jpegs)
+    {
+        if (jpegs.Count == 0) return false;
+        int page = 0;
+
+        var img = new Image { Stretch = Stretch.Uniform, MaxHeight = 540, MinHeight = 340 };
+        var pageLabel = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
+        var prev = new Button { Content = "◀" };
+        var next = new Button { Content = "▶" };
+        var nav = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, HorizontalAlignment = HorizontalAlignment.Center };
+        nav.Children.Add(prev); nav.Children.Add(pageLabel); nav.Children.Add(next);
+
+        async Task ShowPage(int i)
+        {
+            page = Math.Clamp(i, 0, jpegs.Count - 1);
+            img.Source = await BytesToBitmapImageAsync(jpegs[page]);
+            pageLabel.Text = $"Página {page + 1} de {jpegs.Count}";
+            prev.IsEnabled = page > 0;
+            next.IsEnabled = page < jpegs.Count - 1;
+        }
+        prev.Click += async (_, _) => await ShowPage(page - 1);
+        next.Click += async (_, _) => await ShowPage(page + 1);
+
+        var note = new TextBlock
+        {
+            Text = _config.PrintFit == "actual"
+                ? "Tamaño real (1:1): los extremos fuera del área imprimible podrían recortarse."
+                : "Ajustado al área imprimible: la hoja entra completa, sin recortes.",
+            TextWrapping = TextWrapping.Wrap, FontSize = 12, Opacity = 0.75, Margin = new Thickness(0, 4, 0, 0),
+        };
+        var previewToggle = new ToggleSwitch
+        {
+            Header = "Mostrar esta vista previa antes de imprimir",
+            IsOn = _config.ShowPrintPreview, Margin = new Thickness(0, 4, 0, 0),
+        };
+
+        var border = new Border
+        {
+            Background = new SolidColorBrush(Colors.White),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(255, 0xC7, 0xD2, 0xE0)),
+            BorderThickness = new Thickness(1), Padding = new Thickness(8), Child = img,
+        };
+        var panel = new StackPanel { Spacing = 6, MinWidth = 440 };
+        panel.Children.Add(border);
+        panel.Children.Add(nav);
+        panel.Children.Add(note);
+        panel.Children.Add(previewToggle);
+
+        var dlg = new ContentDialog
+        {
+            Title = "Vista previa de impresión",
+            Content = panel,
+            PrimaryButtonText = "Imprimir",
+            CloseButtonText = "Cancelar",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot,
+        };
+        await ShowPage(0);
+        var res = await dlg.ShowAsync();
+        if (previewToggle.IsOn != _config.ShowPrintPreview)
+        {
+            _config.ShowPrintPreview = previewToggle.IsOn;
+            SettingsStore.Save(_config);
+        }
+        return res == ContentDialogResult.Primary;
+    }
+
+    private static async Task<Microsoft.UI.Xaml.Media.Imaging.BitmapImage> BytesToBitmapImageAsync(byte[] bytes)
+    {
+        var bi = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage();
+        using var ms = new InMemoryRandomAccessStream();
+        using (var dw = new DataWriter(ms.GetOutputStreamAt(0)))
+        {
+            dw.WriteBytes(bytes);
+            await dw.StoreAsync();
+            await dw.FlushAsync();
+            dw.DetachStream();
+        }
+        ms.Seek(0);
+        await bi.SetSourceAsync(ms);
+        return bi;
     }
 
     private int ComputePrintPageCount()
