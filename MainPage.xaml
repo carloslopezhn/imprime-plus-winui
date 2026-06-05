@@ -170,25 +170,49 @@
 
                                 <StackPanel Spacing="3">
                                     <TextBlock Text="Modo" Style="{StaticResource FieldLabel}" />
-                                    <ComboBox HorizontalAlignment="Stretch" SelectedIndex="0">
+                                    <ComboBox x:Name="ModeCombo" HorizontalAlignment="Stretch" SelectedIndex="0"
+                                              SelectionChanged="OnModeChanged">
                                         <ComboBoxItem Content="Filas x Columnas" />
                                         <ComboBoxItem Content="Cantidad por página" />
                                         <ComboBoxItem Content="Por tamaño de imagen" />
                                     </ComboBox>
                                 </StackPanel>
 
-                                <Grid ColumnSpacing="8">
+                                <!-- Modo grid: filas x columnas -->
+                                <Grid x:Name="GridPanel" ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Spacing="3">
                                         <TextBlock Text="Filas" Style="{StaticResource FieldLabel}" />
-                                        <TextBox Text="3" />
+                                        <TextBox x:Name="RowsBox" AutomationProperties.AutomationId="RowsBox" Text="3" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Spacing="3">
                                         <TextBlock Text="Columnas" Style="{StaticResource FieldLabel}" />
-                                        <TextBox Text="3" />
+                                        <TextBox x:Name="ColsBox" AutomationProperties.AutomationId="ColsBox" Text="3" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Modo count: imágenes por página -->
+                                <StackPanel x:Name="CountPanel" Spacing="3" Visibility="Collapsed">
+                                    <TextBlock Text="Imágenes por página" Style="{StaticResource FieldLabel}" />
+                                    <TextBox x:Name="CountBox" Text="9" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
+                                </StackPanel>
+
+                                <!-- Modo size: ancho x alto de imagen -->
+                                <Grid x:Name="SizePanel" ColumnSpacing="8" Visibility="Collapsed">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Spacing="3">
+                                        <TextBlock Text="Ancho img (cm)" Style="{StaticResource FieldLabel}" />
+                                        <TextBox x:Name="ImgWBox" Text="5" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="3">
+                                        <TextBlock Text="Alto img (cm)" Style="{StaticResource FieldLabel}" />
+                                        <TextBox x:Name="ImgHBox" Text="5" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
                                     </StackPanel>
                                 </Grid>
 
@@ -199,15 +223,16 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Spacing="3">
                                         <TextBlock Text="Espacio H (cm)" Style="{StaticResource FieldLabel}" />
-                                        <TextBox Text="0.3" />
+                                        <TextBox x:Name="SpacingHBox" Text="0.3" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Spacing="3">
                                         <TextBlock Text="Espacio V (cm)" Style="{StaticResource FieldLabel}" />
-                                        <TextBox Text="0.3" />
+                                        <TextBox x:Name="SpacingVBox" Text="0.3" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
                                     </StackPanel>
                                 </Grid>
 
-                                <ToggleSwitch Header="" OnContent="Márgenes" OffContent="Márgenes" />
+                                <ToggleSwitch x:Name="MarginsToggle" OnContent="Márgenes activados" OffContent="Sin márgenes"
+                                              Toggled="OnMarginsToggled" />
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>

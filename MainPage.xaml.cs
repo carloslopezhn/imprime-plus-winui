@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
@@ -57,6 +58,8 @@ public sealed partial class MainPage : Page
     private const double PageGap = 40;   // separación entre páginas (unidades world)
     private const double Pad = 32;       // margen de la hoja al viewport
 
+    private bool _ready;
+
     public MainPage()
     {
         InitializeComponent();
@@ -64,6 +67,7 @@ public sealed partial class MainPage : Page
         // (y de nuevo si se pierde el device). Es el momento correcto: en Loaded
         // el CanvasControl aún no tiene device.
         PageCanvas.CreateResources += OnCreateResources;
+        _ready = true; // a partir de aquí los eventos del inspector ya son del usuario
     }
 
     private void OnCreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args)
@@ -105,6 +109,14 @@ public sealed partial class MainPage : Page
         }
         UpdateChrome();
         sender.Invalidate();
+
+        // Hook de verificación: setear .Text dispara el MISMO TextChanged que teclear,
+        // ejercitando campo->_config->reflow de punta a punta.
+        if (Environment.GetEnvironmentVariable("IMPRIME_DEV_RELAYOUT") == "1")
+        {
+            ColsBox.Text = "5";
+            RowsBox.Text = "2";
+        }
     }
 
     // ---------- Carga de imágenes ----------
@@ -507,5 +519,61 @@ public sealed partial class MainPage : Page
             ZoomLabel.Text = $"{Math.Round(_userZoom * 100)}%";
         if (EmptyHint is not null)
             EmptyHint.Visibility = _images.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // ---------- Inspector en vivo (panel izquierdo) ----------
+
+    private static double ParseD(string? s, double fallback)
+    {
+        s = s?.Trim().Replace(',', '.');
+        return double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : fallback;
+    }
+
+    private static int ParseI(string? s, int fallback, int min, int max)
+    {
+        if (double.TryParse(s?.Trim().Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
+            return Math.Clamp((int)Math.Round(v), min, max);
+        return fallback;
+    }
+
+    private void OnModeChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_ready) return;
+        _config.LayoutMode = ModeCombo.SelectedIndex switch
+        {
+            1 => LayoutModes.Count,
+            2 => LayoutModes.Size,
+            _ => LayoutModes.Grid,
+        };
+        GridPanel.Visibility = _config.LayoutMode == LayoutModes.Grid ? Visibility.Visible : Visibility.Collapsed;
+        CountPanel.Visibility = _config.LayoutMode == LayoutModes.Count ? Visibility.Visible : Visibility.Collapsed;
+        SizePanel.Visibility = _config.LayoutMode == LayoutModes.Size ? Visibility.Visible : Visibility.Collapsed;
+        ApplyLayoutFields();
+    }
+
+    private void OnLayoutFieldChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!_ready) return;
+        ApplyLayoutFields();
+    }
+
+    private void OnMarginsToggled(object sender, RoutedEventArgs e)
+    {
+        if (!_ready) return;
+        double m = MarginsToggle.IsOn ? 1.0 : 0.0; // cm (UI de 4 márgenes vendrá luego)
+        _config.MarginTop = _config.MarginRight = _config.MarginBottom = _config.MarginLeft = m;
+        PageCanvas.Invalidate();
+    }
+
+    private void ApplyLayoutFields()
+    {
+        _config.GridRows = ParseI(RowsBox?.Text, _config.GridRows, 1, 50);
+        _config.GridCols = ParseI(ColsBox?.Text, _config.GridCols, 1, 50);
+        _config.CountPerPage = ParseI(CountBox?.Text, _config.CountPerPage, 1, 200);
+        _config.ImgWidth = Math.Max(0.1, ParseD(ImgWBox?.Text, _config.ImgWidth));
+        _config.ImgHeight = Math.Max(0.1, ParseD(ImgHBox?.Text, _config.ImgHeight));
+        _config.SpacingH = Math.Max(0, ParseD(SpacingHBox?.Text, _config.SpacingH));
+        _config.SpacingV = Math.Max(0, ParseD(SpacingVBox?.Text, _config.SpacingV));
+        PageCanvas.Invalidate();
     }
 }
