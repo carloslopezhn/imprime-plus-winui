@@ -59,3 +59,7 @@ _sample/
 
 # PDFs de prueba
 _test_export.pdf
+
+# Artefactos de empaque (grandes)
+publish/
+releases/

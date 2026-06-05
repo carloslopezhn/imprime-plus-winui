@@ -68,6 +68,7 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools.WinApp" Version="0.3.2" />
     <PackageReference Include="PDFsharp" Version="6.2.4" />
     <PackageReference Include="SharpCompress" Version="0.49.1" />
+    <PackageReference Include="Velopack" Version="1.2.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="ImprimePlus.Core\ImprimePlus.Core.csproj" />
@@ -86,7 +87,7 @@
   <PropertyGroup>
     <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
     <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
-    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
-    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+    <!-- WinUI/Win2D/WinRT NO se pueden trimmear (rompe XAML y proyecciones por reflexión). -->
+    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 </Project>

@@ -908,6 +908,47 @@ public sealed partial class MainPage : Page
         }
     }
 
+    // ---------- Auto-update (Velopack contra el Flask de imprime.utp.hn) ----------
+
+    private const string UpdateFeedUrl = "https://imprime.utp.hn/winui";
+
+    private async void OnCheckUpdate(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var mgr = new Velopack.UpdateManager(UpdateFeedUrl);
+            if (!mgr.IsInstalled)
+            {
+                await ShowInfo("Actualizaciones", "Estás corriendo una compilación de desarrollo (sin instalar).");
+                return;
+            }
+            var info = await mgr.CheckForUpdatesAsync();
+            if (info is null)
+            {
+                await ShowInfo("Actualizaciones", "Ya tenés la última versión.");
+                return;
+            }
+            await mgr.DownloadUpdatesAsync(info);
+            mgr.ApplyUpdatesAndRestart(info);
+        }
+        catch (Exception ex)
+        {
+            await ShowInfo("Actualizaciones", "No se pudo verificar: " + ex.Message);
+        }
+    }
+
+    private async Task ShowInfo(string title, string message)
+    {
+        var dlg = new ContentDialog
+        {
+            Title = title,
+            Content = message,
+            CloseButtonText = "OK",
+            XamlRoot = this.XamlRoot,
+        };
+        await dlg.ShowAsync();
+    }
+
     // ---------- Export PDF (cada página a 300 DPI; reusa DrawPrintPage) ----------
 
     private async void OnExportPdf(object sender, RoutedEventArgs e)

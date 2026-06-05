@@ -118,7 +118,8 @@
 
                         <Border Width="1" Margin="6,8" Background="{StaticResource BorderBrush2}" />
 
-                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Verificar actualizaciones">
+                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Verificar actualizaciones"
+                                Click="OnCheckUpdate">
                             <FontIcon Glyph="&#xE896;" FontSize="14" />
                         </Button>
                     </StackPanel>
