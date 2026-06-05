@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ImprimePlus (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "ImprimePlus (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

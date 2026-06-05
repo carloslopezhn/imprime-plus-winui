@@ -1,0 +1,1676 @@
+[
+  {
+    "name": "carta-grid-3x3",
+    "config": {
+      "unit": "cm",
+      "pageWidth": 21.59,
+      "pageHeight": 27.94,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 0.3,
+      "spacingV": 0.3,
+      "layoutMode": "grid",
+      "gridRows": 3,
+      "gridCols": 3
+    },
+    "images": [
+      {
+        "id": "img1",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img2",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img3",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img4",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img5",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img6",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img7",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img8",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img9",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img10",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      }
+    ],
+    "expectedLayout": {
+      "pageW": 815.9999999999999,
+      "pageH": 1056,
+      "contentW": 815.9999999999999,
+      "contentH": 1056,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 11.338582677165354,
+      "spacingV": 11.338582677165354,
+      "cols": 3,
+      "rows": 3,
+      "cellW": 264.4409448818897,
+      "cellH": 344.4409448818897,
+      "totalSlots": 9,
+      "perPage": 9,
+      "unit": "cm"
+    },
+    "expectedPages": [
+      [
+        "img1",
+        "img2",
+        "img3",
+        "img4",
+        "img5",
+        "img6",
+        "img7",
+        "img8",
+        "img9"
+      ],
+      [
+        "img10"
+      ]
+    ]
+  },
+  {
+    "name": "carta-count-9",
+    "config": {
+      "unit": "cm",
+      "pageWidth": 21.59,
+      "pageHeight": 27.94,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 0.3,
+      "spacingV": 0.3,
+      "layoutMode": "count",
+      "countPerPage": 9
+    },
+    "images": [
+      {
+        "id": "img1",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img2",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img3",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img4",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img5",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img6",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img7",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img8",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img9",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img10",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img11",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img12",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img13",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img14",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img15",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img16",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img17",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img18",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img19",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img20",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      }
+    ],
+    "expectedLayout": {
+      "pageW": 815.9999999999999,
+      "pageH": 1056,
+      "contentW": 815.9999999999999,
+      "contentH": 1056,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 11.338582677165354,
+      "spacingV": 11.338582677165354,
+      "cols": 3,
+      "rows": 3,
+      "cellW": 264.4409448818897,
+      "cellH": 344.4409448818897,
+      "totalSlots": 9,
+      "perPage": 9,
+      "unit": "cm"
+    },
+    "expectedPages": [
+      [
+        "img1",
+        "img2",
+        "img3",
+        "img4",
+        "img5",
+        "img6",
+        "img7",
+        "img8",
+        "img9"
+      ],
+      [
+        "img10",
+        "img11",
+        "img12",
+        "img13",
+        "img14",
+        "img15",
+        "img16",
+        "img17",
+        "img18"
+      ],
+      [
+        "img19",
+        "img20"
+      ]
+    ]
+  },
+  {
+    "name": "a4-size-5x5",
+    "config": {
+      "unit": "cm",
+      "pageWidth": 21,
+      "pageHeight": 29.7,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 0.2,
+      "spacingV": 0.2,
+      "layoutMode": "size",
+      "imgWidth": 5,
+      "imgHeight": 5
+    },
+    "images": [
+      {
+        "id": "img1",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img2",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img3",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img4",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img5",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img6",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img7",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img8",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img9",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img10",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img11",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img12",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img13",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img14",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img15",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img16",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img17",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img18",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img19",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img20",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img21",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img22",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img23",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img24",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img25",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img26",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img27",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img28",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img29",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img30",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      }
+    ],
+    "expectedLayout": {
+      "pageW": 793.7007874015748,
+      "pageH": 1122.51968503937,
+      "contentW": 793.7007874015748,
+      "contentH": 1122.51968503937,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 7.559055118110236,
+      "spacingV": 7.559055118110236,
+      "cols": 4,
+      "rows": 5,
+      "cellW": 188.97637795275588,
+      "cellH": 188.97637795275588,
+      "totalSlots": 20,
+      "perPage": 20,
+      "unit": "cm"
+    },
+    "expectedPages": [
+      [
+        "img1",
+        "img2",
+        "img3",
+        "img4",
+        "img5",
+        "img6",
+        "img7",
+        "img8",
+        "img9",
+        "img10",
+        "img11",
+        "img12",
+        "img13",
+        "img14",
+        "img15",
+        "img16",
+        "img17",
+        "img18",
+        "img19",
+        "img20"
+      ],
+      [
+        "img21",
+        "img22",
+        "img23",
+        "img24",
+        "img25",
+        "img26",
+        "img27",
+        "img28",
+        "img29",
+        "img30"
+      ]
+    ]
+  },
+  {
+    "name": "legal-grid-2x4-in-spans",
+    "config": {
+      "unit": "in",
+      "pageWidth": 8.5,
+      "pageHeight": 14,
+      "marginTop": 0.5,
+      "marginRight": 0.5,
+      "marginBottom": 0.5,
+      "marginLeft": 0.5,
+      "spacingH": 0.1,
+      "spacingV": 0.1,
+      "layoutMode": "grid",
+      "gridRows": 4,
+      "gridCols": 2
+    },
+    "images": [
+      {
+        "id": "img1",
+        "overrides": {
+          "colSpan": 2,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img2",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img3",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img4",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 2
+        }
+      },
+      {
+        "id": "img5",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img6",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img7",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img8",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img9",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      }
+    ],
+    "expectedLayout": {
+      "pageW": 816,
+      "pageH": 1344,
+      "contentW": 720,
+      "contentH": 1248,
+      "marginTop": 48,
+      "marginRight": 48,
+      "marginBottom": 48,
+      "marginLeft": 48,
+      "spacingH": 9.600000000000001,
+      "spacingV": 9.600000000000001,
+      "cols": 2,
+      "rows": 4,
+      "cellW": 355.2,
+      "cellH": 304.8,
+      "totalSlots": 8,
+      "perPage": 8,
+      "unit": "in"
+    },
+    "expectedPages": [
+      [
+        "img1",
+        "img2",
+        "img3",
+        "img4",
+        "img5",
+        "img6"
+      ],
+      [
+        "img7",
+        "img8",
+        "img9"
+      ]
+    ]
+  },
+  {
+    "name": "count-7",
+    "config": {
+      "unit": "cm",
+      "pageWidth": 21.59,
+      "pageHeight": 27.94,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 0.3,
+      "spacingV": 0.3,
+      "layoutMode": "count",
+      "countPerPage": 7
+    },
+    "images": [
+      {
+        "id": "img1",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img2",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img3",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img4",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img5",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img6",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img7",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img8",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img9",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img10",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img11",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img12",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img13",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img14",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img15",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      }
+    ],
+    "expectedLayout": {
+      "pageW": 815.9999999999999,
+      "pageH": 1056,
+      "contentW": 815.9999999999999,
+      "contentH": 1056,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 11.338582677165354,
+      "spacingV": 11.338582677165354,
+      "cols": 2,
+      "rows": 4,
+      "cellW": 402.33070866141725,
+      "cellH": 255.49606299212599,
+      "totalSlots": 8,
+      "perPage": 7,
+      "unit": "cm"
+    },
+    "expectedPages": [
+      [
+        "img1",
+        "img2",
+        "img3",
+        "img4",
+        "img5",
+        "img6",
+        "img7"
+      ],
+      [
+        "img8",
+        "img9",
+        "img10",
+        "img11",
+        "img12",
+        "img13",
+        "img14"
+      ],
+      [
+        "img15"
+      ]
+    ]
+  },
+  {
+    "name": "mm-grid-5x2",
+    "config": {
+      "unit": "mm",
+      "pageWidth": 210,
+      "pageHeight": 297,
+      "marginTop": 10,
+      "marginRight": 10,
+      "marginBottom": 10,
+      "marginLeft": 10,
+      "spacingH": 3,
+      "spacingV": 3,
+      "layoutMode": "grid",
+      "gridRows": 2,
+      "gridCols": 5
+    },
+    "images": [
+      {
+        "id": "img1",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img2",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img3",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img4",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img5",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img6",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img7",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img8",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img9",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img10",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img11",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img12",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img13",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      }
+    ],
+    "expectedLayout": {
+      "pageW": 793.7007874015749,
+      "pageH": 1122.5196850393702,
+      "contentW": 718.1102362204724,
+      "contentH": 1046.9291338582677,
+      "marginTop": 37.795275590551185,
+      "marginRight": 37.795275590551185,
+      "marginBottom": 37.795275590551185,
+      "marginLeft": 37.795275590551185,
+      "spacingH": 11.338582677165356,
+      "spacingV": 11.338582677165356,
+      "cols": 5,
+      "rows": 2,
+      "cellW": 134.5511811023622,
+      "cellH": 517.7952755905512,
+      "totalSlots": 10,
+      "perPage": 10,
+      "unit": "mm"
+    },
+    "expectedPages": [
+      [
+        "img1",
+        "img2",
+        "img3",
+        "img4",
+        "img5",
+        "img6",
+        "img7",
+        "img8",
+        "img9",
+        "img10"
+      ],
+      [
+        "img11",
+        "img12",
+        "img13"
+      ]
+    ]
+  },
+  {
+    "name": "count-1",
+    "config": {
+      "unit": "cm",
+      "pageWidth": 21.59,
+      "pageHeight": 27.94,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 0,
+      "spacingV": 0,
+      "layoutMode": "count",
+      "countPerPage": 1
+    },
+    "images": [
+      {
+        "id": "img1",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img2",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img3",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img4",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      }
+    ],
+    "expectedLayout": {
+      "pageW": 815.9999999999999,
+      "pageH": 1056,
+      "contentW": 815.9999999999999,
+      "contentH": 1056,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 0,
+      "spacingV": 0,
+      "cols": 1,
+      "rows": 1,
+      "cellW": 815.9999999999999,
+      "cellH": 1056,
+      "totalSlots": 1,
+      "perPage": 1,
+      "unit": "cm"
+    },
+    "expectedPages": [
+      [
+        "img1"
+      ],
+      [
+        "img2"
+      ],
+      [
+        "img3"
+      ],
+      [
+        "img4"
+      ]
+    ]
+  },
+  {
+    "name": "size-bigger-than-page",
+    "config": {
+      "unit": "cm",
+      "pageWidth": 10,
+      "pageHeight": 15,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 0.3,
+      "spacingV": 0.3,
+      "layoutMode": "size",
+      "imgWidth": 20,
+      "imgHeight": 20
+    },
+    "images": [
+      {
+        "id": "img1",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img2",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img3",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      }
+    ],
+    "expectedLayout": {
+      "pageW": 377.95275590551176,
+      "pageH": 566.9291338582676,
+      "contentW": 377.95275590551176,
+      "contentH": 566.9291338582676,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 11.338582677165354,
+      "spacingV": 11.338582677165354,
+      "cols": 1,
+      "rows": 1,
+      "cellW": 755.9055118110235,
+      "cellH": 755.9055118110235,
+      "totalSlots": 1,
+      "perPage": 1,
+      "unit": "cm"
+    },
+    "expectedPages": [
+      [
+        "img1"
+      ],
+      [
+        "img2"
+      ],
+      [
+        "img3"
+      ]
+    ]
+  },
+  {
+    "name": "grid-4x4-spans",
+    "config": {
+      "unit": "cm",
+      "pageWidth": 21.59,
+      "pageHeight": 27.94,
+      "marginTop": 1,
+      "marginRight": 1,
+      "marginBottom": 1,
+      "marginLeft": 1,
+      "spacingH": 0.2,
+      "spacingV": 0.2,
+      "layoutMode": "grid",
+      "gridRows": 4,
+      "gridCols": 4
+    },
+    "images": [
+      {
+        "id": "img1",
+        "overrides": {
+          "colSpan": 2,
+          "rowSpan": 2
+        }
+      },
+      {
+        "id": "img2",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img3",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img4",
+        "overrides": {
+          "colSpan": 3,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img5",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img6",
+        "overrides": {
+          "colSpan": 2,
+          "rowSpan": 2
+        }
+      },
+      {
+        "id": "img7",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img8",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img9",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img10",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img11",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img12",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img13",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 3
+        }
+      },
+      {
+        "id": "img14",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img15",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img16",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img17",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img18",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      }
+    ],
+    "expectedLayout": {
+      "pageW": 815.9999999999999,
+      "pageH": 1056,
+      "contentW": 740.4094488188974,
+      "contentH": 980.4094488188975,
+      "marginTop": 37.79527559055118,
+      "marginRight": 37.79527559055118,
+      "marginBottom": 37.79527559055118,
+      "marginLeft": 37.79527559055118,
+      "spacingH": 7.559055118110236,
+      "spacingV": 7.559055118110236,
+      "cols": 4,
+      "rows": 4,
+      "cellW": 179.4330708661417,
+      "cellH": 239.43307086614172,
+      "totalSlots": 16,
+      "perPage": 16,
+      "unit": "cm"
+    },
+    "expectedPages": [
+      [
+        "img1",
+        "img2",
+        "img3",
+        "img4",
+        "img5"
+      ],
+      [
+        "img6",
+        "img7",
+        "img8",
+        "img9",
+        "img10",
+        "img11",
+        "img12"
+      ],
+      [
+        "img13",
+        "img14",
+        "img15",
+        "img16",
+        "img17",
+        "img18"
+      ]
+    ]
+  },
+  {
+    "name": "count-12-spans",
+    "config": {
+      "unit": "cm",
+      "pageWidth": 21.59,
+      "pageHeight": 27.94,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 0.3,
+      "spacingV": 0.3,
+      "layoutMode": "count",
+      "countPerPage": 12
+    },
+    "images": [
+      {
+        "id": "img1",
+        "overrides": {
+          "colSpan": 2,
+          "rowSpan": 2
+        }
+      },
+      {
+        "id": "img2",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img3",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img4",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img5",
+        "overrides": {
+          "colSpan": 2,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img6",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img7",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img8",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img9",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img10",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img11",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img12",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img13",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img14",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img15",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      }
+    ],
+    "expectedLayout": {
+      "pageW": 815.9999999999999,
+      "pageH": 1056,
+      "contentW": 815.9999999999999,
+      "contentH": 1056,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 11.338582677165354,
+      "spacingV": 11.338582677165354,
+      "cols": 3,
+      "rows": 4,
+      "cellW": 264.4409448818897,
+      "cellH": 255.49606299212599,
+      "totalSlots": 12,
+      "perPage": 12,
+      "unit": "cm"
+    },
+    "expectedPages": [
+      [
+        "img1",
+        "img2",
+        "img3",
+        "img4",
+        "img5",
+        "img6",
+        "img7",
+        "img8"
+      ],
+      [
+        "img9",
+        "img10",
+        "img11",
+        "img12",
+        "img13",
+        "img14",
+        "img15"
+      ]
+    ]
+  },
+  {
+    "name": "grid-1x1",
+    "config": {
+      "unit": "cm",
+      "pageWidth": 10.16,
+      "pageHeight": 15.24,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 0,
+      "spacingV": 0,
+      "layoutMode": "grid",
+      "gridRows": 1,
+      "gridCols": 1
+    },
+    "images": [
+      {
+        "id": "img1",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img2",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img3",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img4",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      },
+      {
+        "id": "img5",
+        "overrides": {
+          "colSpan": 1,
+          "rowSpan": 1
+        }
+      }
+    ],
+    "expectedLayout": {
+      "pageW": 384,
+      "pageH": 576,
+      "contentW": 384,
+      "contentH": 576,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 0,
+      "spacingV": 0,
+      "cols": 1,
+      "rows": 1,
+      "cellW": 384,
+      "cellH": 576,
+      "totalSlots": 1,
+      "perPage": 1,
+      "unit": "cm"
+    },
+    "expectedPages": [
+      [
+        "img1"
+      ],
+      [
+        "img2"
+      ],
+      [
+        "img3"
+      ],
+      [
+        "img4"
+      ],
+      [
+        "img5"
+      ]
+    ]
+  },
+  {
+    "name": "empty",
+    "config": {
+      "unit": "cm",
+      "pageWidth": 21.59,
+      "pageHeight": 27.94,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 0.3,
+      "spacingV": 0.3,
+      "layoutMode": "grid",
+      "gridRows": 3,
+      "gridCols": 3
+    },
+    "images": [],
+    "expectedLayout": {
+      "pageW": 815.9999999999999,
+      "pageH": 1056,
+      "contentW": 815.9999999999999,
+      "contentH": 1056,
+      "marginTop": 0,
+      "marginRight": 0,
+      "marginBottom": 0,
+      "marginLeft": 0,
+      "spacingH": 11.338582677165354,
+      "spacingV": 11.338582677165354,
+      "cols": 3,
+      "rows": 3,
+      "cellW": 264.4409448818897,
+      "cellH": 344.4409448818897,
+      "totalSlots": 9,
+      "perPage": 9,
+      "unit": "cm"
+    },
+    "expectedPages": [
+      []
+    ]
+  }
+]
