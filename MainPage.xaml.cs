@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.Graphics.Canvas;
 using Microsoft.Graphics.Canvas.Geometry;
 using Microsoft.Graphics.Canvas.UI;
@@ -120,6 +121,21 @@ public sealed partial class MainPage : Page
         {
             ColsBox.Text = "5";
             RowsBox.Text = "2";
+        }
+
+        // Hook de verificación de estilos/filtros (Fase 6).
+        if (Environment.GetEnvironmentVariable("IMPRIME_DEV_STYLE") == "1" && _images.Count >= 5)
+        {
+            _images[0].Shape = ImageShape.Circle;
+            _images[1].Shape = ImageShape.Rounded;
+            _images[1].BorderWidth = 6; _images[1].BorderColor = ColorHelper.FromArgb(255, 0x3B, 0x82, 0xF6);
+            _images[2].Shape = ImageShape.Hexagon; _images[2].Sepia = 1.0;
+            _images[3].Shape = ImageShape.Star; _images[3].Grayscale = 1.0;
+            _images[4].Saturation = 1.8; _images[4].Shadow = ShadowStrength.Strong;
+            _images[4].CaptionText = "Foto 5"; _images[4].CaptionPos = CaptionPosition.Overlay;
+            _selected.Clear(); _selected.Add(_images[0]);
+            UpdateInspector();
+            sender.Invalidate();
         }
     }
 
@@ -263,6 +279,7 @@ public sealed partial class MainPage : Page
         _images.Clear();
         _selected.Clear();
         UpdateChrome();
+        UpdateInspector();
         PageCanvas.Invalidate();
     }
 
@@ -313,6 +330,7 @@ public sealed partial class MainPage : Page
             {
                 if (!_selected.Contains(hit)) { _selected.Clear(); _selected.Add(hit); }
                 ShowContextMenu(p.Position);
+                UpdateInspector();
                 PageCanvas.Invalidate();
             }
             return;
@@ -339,12 +357,14 @@ public sealed partial class MainPage : Page
                     _selected.Add(hit);
                 }
                 UpdateChrome();
+                UpdateInspector();
                 PageCanvas.Invalidate();
             }
             else
             {
                 if (!ctrl) _selected.Clear();
                 BeginPan(e);
+                UpdateInspector();
                 PageCanvas.Invalidate();
             }
         }
@@ -433,6 +453,7 @@ public sealed partial class MainPage : Page
         _images.RemoveAll(_selected.Contains);
         _selected.Clear();
         UpdateChrome();
+        UpdateInspector();
         PageCanvas.Invalidate();
     }
 
@@ -545,7 +566,7 @@ public sealed partial class MainPage : Page
                 double spanH = pl.RowSpan * layout.CellH + (pl.RowSpan - 1) * layout.SpacingV;
                 var dest = new Rect(ox + cellX * scale, oy + cellY * scale, spanW * scale, spanH * scale);
 
-                DrawImageInCell(ds, img, dest);
+                ImageRenderer.Draw(ds, img, dest, scale);
 
                 if (_selected.Contains(img))
                     ds.DrawRectangle(dest, selStroke, 2.5f);
@@ -557,47 +578,6 @@ public sealed partial class MainPage : Page
         _lastOy = oy;
         _lastLayout = layout;
         _lastPages = pagePlacements;
-    }
-
-    /// <summary>Dibuja la imagen en su celda con fit (cover/contain/stretch), zoom interno y rotación 90°, recortada a la celda.</summary>
-    private static void DrawImageInCell(CanvasDrawingSession ds, EditorImage img, Rect cell)
-    {
-        var bmp = img.Bitmap;
-        float bw = (float)bmp.Size.Width, bh = (float)bmp.Size.Height;
-        if (bw <= 0 || bh <= 0 || cell.Width <= 0 || cell.Height <= 0) return;
-
-        bool quarter = ((int)Math.Round(img.RotationDeg / 90.0)) % 2 != 0;
-        float ebw = quarter ? bh : bw;
-        float ebh = quarter ? bw : bh;
-
-        using var layer = ds.CreateLayer(1f, cell);
-        var prev = ds.Transform;
-        var center = new Vector2((float)(cell.X + cell.Width / 2), (float)(cell.Y + cell.Height / 2));
-        var offset = new Vector2((float)(img.OffsetX * cell.Width), (float)(img.OffsetY * cell.Height));
-
-        Matrix3x2 m;
-        if (img.Fit == FitMode.Stretch)
-        {
-            float sx = (float)(cell.Width / ebw);
-            float sy = (float)(cell.Height / ebh);
-            m = Matrix3x2.CreateTranslation(-bw / 2f, -bh / 2f)
-                * Matrix3x2.CreateScale(quarter ? sy : sx, quarter ? sx : sy)
-                * Matrix3x2.CreateRotation((float)(img.RotationDeg * Math.PI / 180.0))
-                * Matrix3x2.CreateTranslation(center + offset);
-        }
-        else
-        {
-            double sx = cell.Width / ebw, sy = cell.Height / ebh;
-            double s = (img.Fit == FitMode.Contain ? Math.Min(sx, sy) : Math.Max(sx, sy)) * img.Zoom;
-            m = Matrix3x2.CreateTranslation(-bw / 2f, -bh / 2f)
-                * Matrix3x2.CreateScale((float)s)
-                * Matrix3x2.CreateRotation((float)(img.RotationDeg * Math.PI / 180.0))
-                * Matrix3x2.CreateTranslation(center + offset);
-        }
-
-        ds.Transform = m;
-        ds.DrawImage(bmp, 0, 0);
-        ds.Transform = prev;
     }
 
     // ---------- Chrome (label de zoom + hint) ----------
@@ -664,5 +644,119 @@ public sealed partial class MainPage : Page
         _config.SpacingH = Math.Max(0, ParseD(SpacingHBox?.Text, _config.SpacingH));
         _config.SpacingV = Math.Max(0, ParseD(SpacingVBox?.Text, _config.SpacingV));
         PageCanvas.Invalidate();
+    }
+
+    // ---------- Inspector per-imagen (panel derecho, en vivo) ----------
+
+    private bool _syncingInspector;
+
+    private EditorImage? Primary => _images.FirstOrDefault(i => _selected.Contains(i));
+
+    private void UpdateInspector()
+    {
+        var img = Primary;
+        bool has = img is not null;
+        if (InspectorEmpty is not null) InspectorEmpty.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
+        if (InspectorContent is not null) InspectorContent.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
+        if (img is null) return;
+
+        _syncingInspector = true;
+        InsFit.SelectedIndex = (int)img.Fit;
+        InsZoom.Value = img.Zoom * 100;
+        InsShape.SelectedIndex = (int)img.Shape;
+        InsRadius.Value = img.CornerRadius;
+        InsBorder.Value = img.BorderWidth;
+        SetSwatch(img.BorderColor);
+        InsBorderPicker.Color = img.BorderColor;
+        InsBrightness.Value = img.Brightness * 100;
+        InsContrast.Value = img.Contrast * 100;
+        InsSaturation.Value = img.Saturation * 100;
+        InsGrayscale.Value = img.Grayscale * 100;
+        InsSepia.Value = img.Sepia * 100;
+        InsCaptionText.Text = img.CaptionText;
+        InsCaptionPos.SelectedIndex = (int)img.CaptionPos;
+        _syncingInspector = false;
+    }
+
+    private void SetSwatch(Color c)
+    {
+        if (InsBorderSwatch is not null) InsBorderSwatch.Background = new SolidColorBrush(c);
+    }
+
+    private void ApplyToSelected(Action<EditorImage> apply)
+    {
+        if (_selected.Count == 0) return;
+        foreach (var img in _selected) apply(img);
+        PageCanvas.Invalidate();
+    }
+
+    private void OnInsFitChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncingInspector || InsFit.SelectedIndex < 0) return;
+        ApplyToSelected(i => i.Fit = (FitMode)InsFit.SelectedIndex);
+    }
+
+    private void OnInsZoomChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_syncingInspector) return;
+        ApplyToSelected(i => i.Zoom = InsZoom.Value / 100.0);
+    }
+
+    private void OnInsRotate(object sender, RoutedEventArgs e) => RotateSelected();
+
+    private void OnInsShapeChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncingInspector || InsShape.SelectedIndex < 0) return;
+        ApplyToSelected(i => i.Shape = (ImageShape)InsShape.SelectedIndex);
+    }
+
+    private void OnInsRadiusChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_syncingInspector) return;
+        ApplyToSelected(i => i.CornerRadius = InsRadius.Value);
+    }
+
+    private void OnInsBorderChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_syncingInspector) return;
+        ApplyToSelected(i => i.BorderWidth = InsBorder.Value);
+    }
+
+    private void OnInsBorderColorChanged(ColorPicker sender, ColorChangedEventArgs args)
+    {
+        if (_syncingInspector) return;
+        SetSwatch(args.NewColor);
+        ApplyToSelected(i => i.BorderColor = args.NewColor);
+    }
+
+    private void OnInsFilterChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_syncingInspector) return;
+        ApplyToSelected(i =>
+        {
+            i.Brightness = InsBrightness.Value / 100.0;
+            i.Contrast = InsContrast.Value / 100.0;
+            i.Saturation = InsSaturation.Value / 100.0;
+            i.Grayscale = InsGrayscale.Value / 100.0;
+            i.Sepia = InsSepia.Value / 100.0;
+        });
+    }
+
+    private void OnInsResetFilters(object sender, RoutedEventArgs e)
+    {
+        ApplyToSelected(i => { i.Brightness = 1; i.Contrast = 1; i.Saturation = 1; i.Grayscale = 0; i.Sepia = 0; });
+        UpdateInspector();
+    }
+
+    private void OnInsCaptionTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_syncingInspector) return;
+        ApplyToSelected(i => i.CaptionText = InsCaptionText.Text);
+    }
+
+    private void OnInsCaptionPosChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncingInspector || InsCaptionPos.SelectedIndex < 0) return;
+        ApplyToSelected(i => i.CaptionPos = (CaptionPosition)InsCaptionPos.SelectedIndex);
     }
 }

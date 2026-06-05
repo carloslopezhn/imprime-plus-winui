@@ -272,15 +272,107 @@
                         </StackPanel>
                     </Border>
 
-                    <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10" Padding="20">
-                        <FontIcon Glyph="&#xE7C3;" FontSize="34" Foreground="{StaticResource BorderBrush2}" />
-                        <TextBlock Text="Selecciona una imagen" FontSize="13"
-                                   Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"
-                                   TextAlignment="Center" />
-                        <TextBlock Text="para editar zoom, forma, borde, filtros y título"
-                                   FontSize="11.5" Foreground="{StaticResource TextMutedBrush}"
-                                   HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
-                    </StackPanel>
+                    <Grid Grid.Row="1">
+                        <!-- Estado vacío -->
+                        <StackPanel x:Name="InspectorEmpty" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10" Padding="20">
+                            <FontIcon Glyph="&#xE7C3;" FontSize="34" Foreground="{StaticResource BorderBrush2}" />
+                            <TextBlock Text="Selecciona una imagen" FontSize="13"
+                                       Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center"
+                                       TextAlignment="Center" />
+                            <TextBlock Text="para editar zoom, forma, borde, filtros y título"
+                                       FontSize="11.5" Foreground="{StaticResource TextMutedBrush}"
+                                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <!-- Controles per-imagen -->
+                        <ScrollViewer x:Name="InspectorContent" Padding="14,12" VerticalScrollBarVisibility="Auto"
+                                      Visibility="Collapsed">
+                            <StackPanel Spacing="16">
+
+                                <!-- Encaje -->
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="ENCAJE" Style="{StaticResource SectionTitle}" />
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="Ajuste" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox x:Name="InsFit" HorizontalAlignment="Stretch" SelectionChanged="OnInsFitChanged">
+                                            <ComboBoxItem Content="Cubrir" />
+                                            <ComboBoxItem Content="Contener" />
+                                            <ComboBoxItem Content="Estirar" />
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <TextBlock Text="Zoom interno" Style="{StaticResource FieldLabel}" />
+                                    <Slider x:Name="InsZoom" Minimum="20" Maximum="300" Value="100"
+                                            ValueChanged="OnInsZoomChanged" />
+                                    <Button Content="Rotar 90°" HorizontalAlignment="Stretch" Click="OnInsRotate" />
+                                </StackPanel>
+
+                                <!-- Forma y borde -->
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="FORMA Y BORDE" Style="{StaticResource SectionTitle}" />
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="Forma" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox x:Name="InsShape" HorizontalAlignment="Stretch" SelectionChanged="OnInsShapeChanged">
+                                            <ComboBoxItem Content="Rectángulo" />
+                                            <ComboBoxItem Content="Redondeado" />
+                                            <ComboBoxItem Content="Circular" />
+                                            <ComboBoxItem Content="Hexágono" />
+                                            <ComboBoxItem Content="Estrella" />
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <TextBlock Text="Radio de esquina" Style="{StaticResource FieldLabel}" />
+                                    <Slider x:Name="InsRadius" Minimum="0" Maximum="80" Value="14" ValueChanged="OnInsRadiusChanged" />
+                                    <TextBlock Text="Ancho de borde" Style="{StaticResource FieldLabel}" />
+                                    <Slider x:Name="InsBorder" Minimum="0" Maximum="20" Value="0" ValueChanged="OnInsBorderChanged" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="Color de borde" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" />
+                                        <Button x:Name="InsBorderColorBtn" Width="36" Height="26" Padding="0">
+                                            <Border x:Name="InsBorderSwatch" Background="White" Width="24" Height="14"
+                                                    BorderBrush="{StaticResource BorderBrush2}" BorderThickness="1" />
+                                            <Button.Flyout>
+                                                <Flyout>
+                                                    <ColorPicker x:Name="InsBorderPicker" ColorSpectrumShape="Ring"
+                                                                 IsMoreButtonVisible="False" IsColorChannelTextInputVisible="False"
+                                                                 IsHexInputVisible="True" ColorChanged="OnInsBorderColorChanged" />
+                                                </Flyout>
+                                            </Button.Flyout>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Filtros -->
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="FILTROS" Style="{StaticResource SectionTitle}" />
+                                    <TextBlock Text="Brillo" Style="{StaticResource FieldLabel}" />
+                                    <Slider x:Name="InsBrightness" Minimum="0" Maximum="200" Value="100" ValueChanged="OnInsFilterChanged" />
+                                    <TextBlock Text="Contraste" Style="{StaticResource FieldLabel}" />
+                                    <Slider x:Name="InsContrast" Minimum="0" Maximum="200" Value="100" ValueChanged="OnInsFilterChanged" />
+                                    <TextBlock Text="Saturación" Style="{StaticResource FieldLabel}" />
+                                    <Slider x:Name="InsSaturation" Minimum="0" Maximum="200" Value="100" ValueChanged="OnInsFilterChanged" />
+                                    <TextBlock Text="Escala de grises" Style="{StaticResource FieldLabel}" />
+                                    <Slider x:Name="InsGrayscale" Minimum="0" Maximum="100" Value="0" ValueChanged="OnInsFilterChanged" />
+                                    <TextBlock Text="Sepia" Style="{StaticResource FieldLabel}" />
+                                    <Slider x:Name="InsSepia" Minimum="0" Maximum="100" Value="0" ValueChanged="OnInsFilterChanged" />
+                                    <Button Content="Restablecer filtros" HorizontalAlignment="Stretch" Click="OnInsResetFilters" />
+                                </StackPanel>
+
+                                <!-- Título -->
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="TÍTULO" Style="{StaticResource SectionTitle}" />
+                                    <TextBox x:Name="InsCaptionText" PlaceholderText="Texto del título"
+                                             TextChanged="OnInsCaptionTextChanged" />
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="Posición" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox x:Name="InsCaptionPos" HorizontalAlignment="Stretch" SelectionChanged="OnInsCaptionPosChanged">
+                                            <ComboBoxItem Content="Ninguno" />
+                                            <ComboBoxItem Content="Debajo" />
+                                            <ComboBoxItem Content="Arriba" />
+                                            <ComboBoxItem Content="Encima" />
+                                        </ComboBox>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>
