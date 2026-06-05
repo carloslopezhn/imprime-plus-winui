@@ -1911,23 +1911,92 @@ public sealed partial class MainPage : Page
             if (await ask.ShowAsync() != ContentDialogResult.Primary) return;
 
             var url = info.Url.StartsWith("http") ? info.Url : "https://imprime.utp.hn" + info.Url;
-            // Descarga del instalador (decenas de MB): timeout largo y por streaming,
-            // si no, en conexiones normales expira (antes: 20 s para 77 MB → fallaba).
-            using var dl = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(15) };
             var tmp = Path.Combine(Path.GetTempPath(), "ImprimePlus-Setup.exe");
-            using (var resp = await dl.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead))
-            {
-                resp.EnsureSuccessStatusCode();
-                using var src = await resp.Content.ReadAsStreamAsync();
-                using var dst = new FileStream(tmp, FileMode.Create, FileAccess.Write, FileShare.None);
-                await src.CopyToAsync(dst);
-            }
+            // Descarga con gestor de progreso (barra + MB/% / velocidad). Cancelable.
+            bool ok = await DownloadUpdateAsync(url, tmp);
+            if (!ok) return; // cancelado o error (ya avisado dentro del gestor)
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(tmp) { UseShellExecute = true });
             Application.Current.Exit();
         }
         catch (Exception ex)
         {
             await ShowInfo("Actualizaciones", "No se pudo verificar: " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Descarga el instalador mostrando un gestor con barra de progreso (MB, %, velocidad)
+    /// y botón Cancelar. Devuelve true si el archivo quedó completo y listo.
+    /// </summary>
+    private async Task<bool> DownloadUpdateAsync(string url, string destPath)
+    {
+        var cts = new System.Threading.CancellationTokenSource();
+        var status = new TextBlock { Text = "Conectando…" };
+        var bar = new ProgressBar { Minimum = 0, Maximum = 100, Value = 0, Width = 360, IsIndeterminate = true };
+        var panel = new StackPanel { Spacing = 12, MinWidth = 380 };
+        panel.Children.Add(status);
+        panel.Children.Add(bar);
+        var dlg = new ContentDialog
+        {
+            Title = "Descargando actualización",
+            Content = panel,
+            CloseButtonText = "Cancelar",
+            XamlRoot = this.XamlRoot,
+        };
+        dlg.CloseButtonClick += (_, _) => cts.Cancel();
+        _ = dlg.ShowAsync(); // mostrar sin bloquear; lo cerramos con Hide()
+
+        try
+        {
+            // Timeout sólo para conectar/recibir cabeceras; el cuerpo lo gobierna el CTS (Cancelar).
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+            using var resp = await http.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cts.Token);
+            resp.EnsureSuccessStatusCode();
+            long? total = resp.Content.Headers.ContentLength;
+            bar.IsIndeterminate = !total.HasValue;
+
+            using var src = await resp.Content.ReadAsStreamAsync(cts.Token);
+            using var dst = new FileStream(destPath, FileMode.Create, FileAccess.Write, FileShare.None);
+            var buffer = new byte[81920];
+            long readTotal = 0; int lastPct = -1; int n;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while ((n = await src.ReadAsync(buffer.AsMemory(0, buffer.Length), cts.Token)) > 0)
+            {
+                await dst.WriteAsync(buffer.AsMemory(0, n), cts.Token);
+                readTotal += n;
+                double mb = readTotal / 1048576.0;
+                double spd = mb / Math.Max(0.001, sw.Elapsed.TotalSeconds);
+                if (total.HasValue)
+                {
+                    int pct = (int)(readTotal * 100 / total.Value);
+                    if (pct != lastPct)
+                    {
+                        lastPct = pct;
+                        bar.Value = pct;
+                        status.Text = $"{mb:0.0} de {total.Value / 1048576.0:0.0} MB · {pct}% · {spd:0.0} MB/s";
+                    }
+                }
+                else
+                {
+                    status.Text = $"{mb:0.0} MB · {spd:0.0} MB/s";
+                }
+            }
+            await dst.FlushAsync(cts.Token);
+            dlg.Hide();
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            dlg.Hide();
+            try { if (File.Exists(destPath)) File.Delete(destPath); } catch { }
+            return false;
+        }
+        catch (Exception ex)
+        {
+            dlg.Hide();
+            try { if (File.Exists(destPath)) File.Delete(destPath); } catch { }
+            await ShowInfo("Actualizaciones", "No se pudo descargar: " + ex.Message);
+            return false;
         }
     }
 
