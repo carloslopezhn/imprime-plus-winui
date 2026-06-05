@@ -85,9 +85,10 @@
 
                         <Border Width="1" Margin="6,8" Background="{StaticResource BorderBrush2}" />
 
-                        <ComboBox MinWidth="150" VerticalAlignment="Center" ToolTipService.ToolTip="Seleccionar impresora"
-                                  PlaceholderText="Cargando impresoras..." />
-                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Configuración de impresora">
+                        <ComboBox x:Name="PrinterCombo" MinWidth="150" VerticalAlignment="Center"
+                                  ToolTipService.ToolTip="Seleccionar impresora" PlaceholderText="Sin impresoras" />
+                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Configuración de impresora"
+                                Click="OnPrinterConfig">
                             <FontIcon Glyph="&#xF56B;" FontSize="14" />
                         </Button>
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Exportar a PDF" Click="OnExportPdf">

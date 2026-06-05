@@ -63,6 +63,11 @@ public sealed partial class MainPage : Page
     private bool _panning;
     private Point _lastPointer;
 
+    // Arrastrar imagen para reordenar entre celdas.
+    private bool _maybeDrag, _dragging;
+    private EditorImage? _dragImage, _dragTarget;
+    private Point _dragStart;
+
     private int _idSeq;
 
     // Modo póster: 1 imagen dividida en _posterCols x _posterRows páginas.
@@ -101,6 +106,7 @@ public sealed partial class MainPage : Page
         if (saved is not null) _config = saved;
         SyncLeftPanelFromConfig();
         UpdatePageSummary();
+        PopulatePrinters();
 
         _ready = true; // a partir de aquí los eventos del inspector ya son del usuario
     }
@@ -398,7 +404,19 @@ public sealed partial class MainPage : Page
         var p = e.GetCurrentPoint(PageCanvas);
         int delta = p.Properties.MouseWheelDelta;
         if (delta == 0) return;
-        ZoomAround(p.Position, delta > 0 ? 1.12 : 1 / 1.12);
+        double factor = delta > 0 ? 1.12 : 1 / 1.12;
+        if (_selected.Count > 0)
+        {
+            // Hay imagen(es) seleccionada(s): la rueda hace zoom INTERNO de la imagen.
+            foreach (var img in _selected) img.Zoom = Math.Clamp(img.Zoom * factor, 0.2, 6.0);
+            UpdateInspector();
+            PageCanvas.Invalidate();
+        }
+        else
+        {
+            // Sin selección: la rueda hace zoom a la PÁGINA.
+            ZoomAround(p.Position, factor);
+        }
         e.Handled = true;
     }
 
@@ -464,6 +482,9 @@ public sealed partial class MainPage : Page
                 }
                 UpdateChrome();
                 UpdateInspector();
+                // Preparar arrastre-para-reordenar.
+                _dragImage = hit; _maybeDrag = true; _dragging = false; _dragTarget = null; _dragStart = p.Position;
+                PageCanvas.CapturePointer(e.Pointer);
                 PageCanvas.Invalidate();
             }
             else
@@ -484,12 +505,26 @@ public sealed partial class MainPage : Page
 
     private void OnCanvasMoved(object sender, PointerRoutedEventArgs e)
     {
-        if (!_panning) return;
-        var pos = e.GetCurrentPoint(PageCanvas).Position;
-        _panX += pos.X - _lastPointer.X;
-        _panY += pos.Y - _lastPointer.Y;
-        _lastPointer = pos;
-        PageCanvas.Invalidate();
+        if (_panning)
+        {
+            var pp = e.GetCurrentPoint(PageCanvas).Position;
+            _panX += pp.X - _lastPointer.X;
+            _panY += pp.Y - _lastPointer.Y;
+            _lastPointer = pp;
+            PageCanvas.Invalidate();
+            return;
+        }
+        if (_maybeDrag)
+        {
+            var pos = e.GetCurrentPoint(PageCanvas).Position;
+            if (!_dragging && Math.Abs(pos.X - _dragStart.X) + Math.Abs(pos.Y - _dragStart.Y) > 8) _dragging = true;
+            if (_dragging)
+            {
+                var t = HitTest(pos);
+                _dragTarget = (t != _dragImage) ? t : null;
+                PageCanvas.Invalidate();
+            }
+        }
     }
 
     private void OnCanvasReleased(object sender, PointerRoutedEventArgs e)
@@ -498,7 +533,26 @@ public sealed partial class MainPage : Page
         {
             _panning = false;
             PageCanvas.ReleasePointerCapture(e.Pointer);
+            return;
         }
+        if (_maybeDrag)
+        {
+            _maybeDrag = false;
+            PageCanvas.ReleasePointerCapture(e.Pointer);
+            if (_dragging && _dragImage is not null && _dragTarget is not null && _dragTarget != _dragImage)
+                ReorderImage(_dragImage, _dragTarget);
+            _dragging = false; _dragImage = null; _dragTarget = null;
+            PageCanvas.Invalidate();
+        }
+    }
+
+    private void ReorderImage(EditorImage src, EditorImage target)
+    {
+        if (!_images.Remove(src)) return;
+        int ti = _images.IndexOf(target);
+        if (ti < 0) ti = _images.Count;
+        _images.Insert(ti, src);
+        UpdateChrome();
     }
 
     // ---------- Menú contextual ----------
@@ -521,6 +575,10 @@ public sealed partial class MainPage : Page
         dup.Click += (_, _) => DuplicateSelected();
         menu.Items.Add(dup);
 
+        var mul = new MenuFlyoutItem { Text = "Multiplicar…" };
+        mul.Click += (_, _) => MultiplySelectedAsync();
+        menu.Items.Add(mul);
+
         menu.Items.Add(new MenuFlyoutSeparator());
 
         var exH = new MenuFlyoutItem { Text = "Ampliar horizontalmente" };
@@ -531,6 +589,10 @@ public sealed partial class MainPage : Page
         exV.Click += (_, _) => ExpandSelected(horizontal: false);
         menu.Items.Add(exV);
 
+        var reset = new MenuFlyoutItem { Text = "Restablecer tamaño (1x1)" };
+        reset.Click += (_, _) => ResetSpanSelected();
+        menu.Items.Add(reset);
+
         menu.Items.Add(new MenuFlyoutSeparator());
 
         var del = new MenuFlyoutItem { Text = "Limpiar espacio (eliminar)" };
@@ -540,29 +602,68 @@ public sealed partial class MainPage : Page
         menu.ShowAt(PageCanvas, new FlyoutShowOptions { Position = at });
     }
 
+    private EditorImage CloneImage(EditorImage img)
+    {
+        var c = new EditorImage($"img{++_idSeq}", img.Bitmap)
+        {
+            SourcePath = img.SourcePath, SourceBytes = img.SourceBytes,
+            Fit = img.Fit, Zoom = img.Zoom, OffsetX = img.OffsetX, OffsetY = img.OffsetY, RotationDeg = img.RotationDeg,
+            Shape = img.Shape, CornerRadius = img.CornerRadius, BorderWidth = img.BorderWidth,
+            BorderColor = img.BorderColor, BackgroundColor = img.BackgroundColor, Shadow = img.Shadow,
+            Brightness = img.Brightness, Contrast = img.Contrast, Saturation = img.Saturation,
+            Grayscale = img.Grayscale, Sepia = img.Sepia, Hue = img.Hue, Blur = img.Blur, Invert = img.Invert, Opacity = img.Opacity,
+            CaptionText = img.CaptionText, CaptionPos = img.CaptionPos, CaptionFont = img.CaptionFont,
+            CaptionSize = img.CaptionSize, CaptionColor = img.CaptionColor, CaptionBg = img.CaptionBg,
+        };
+        c.Overrides.ColSpan = img.Overrides.ColSpan;
+        c.Overrides.RowSpan = img.Overrides.RowSpan;
+        return c;
+    }
+
     private void DuplicateSelected()
     {
-        var clones = new List<EditorImage>();
+        int added = 0;
         foreach (var img in _images.Where(_selected.Contains).ToList())
         {
-            var c = new EditorImage($"img{++_idSeq}", img.Bitmap)
-            {
-                SourcePath = img.SourcePath, SourceBytes = img.SourceBytes,
-                Fit = img.Fit, Zoom = img.Zoom, OffsetX = img.OffsetX, OffsetY = img.OffsetY, RotationDeg = img.RotationDeg,
-                Shape = img.Shape, CornerRadius = img.CornerRadius, BorderWidth = img.BorderWidth,
-                BorderColor = img.BorderColor, BackgroundColor = img.BackgroundColor, Shadow = img.Shadow,
-                Brightness = img.Brightness, Contrast = img.Contrast, Saturation = img.Saturation,
-                Grayscale = img.Grayscale, Sepia = img.Sepia, Hue = img.Hue, Blur = img.Blur, Invert = img.Invert, Opacity = img.Opacity,
-                CaptionText = img.CaptionText, CaptionPos = img.CaptionPos, CaptionFont = img.CaptionFont,
-                CaptionSize = img.CaptionSize, CaptionColor = img.CaptionColor, CaptionBg = img.CaptionBg,
-            };
-            c.Overrides.ColSpan = img.Overrides.ColSpan;
-            c.Overrides.RowSpan = img.Overrides.RowSpan;
             int idx = _images.IndexOf(img);
-            _images.Insert(idx + 1, c);
-            clones.Add(c);
+            _images.Insert(idx + 1, CloneImage(img));
+            added++;
         }
-        if (clones.Count > 0) { UpdateChrome(); PageCanvas.Invalidate(); }
+        if (added > 0) { UpdateChrome(); PageCanvas.Invalidate(); }
+    }
+
+    private void ResetSpanSelected()
+    {
+        foreach (var img in _selected) { img.Overrides.ColSpan = 1; img.Overrides.RowSpan = 1; }
+        if (_selected.Count > 0) PageCanvas.Invalidate();
+    }
+
+    private async void MultiplySelectedAsync()
+    {
+        if (_selected.Count == 0) return;
+        var box = new TextBox { Text = "2", Width = 120 };
+        var panel = new StackPanel { Spacing = 8 };
+        panel.Children.Add(new TextBlock { Text = "¿Cuántas copias de cada imagen seleccionada?", TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(box);
+        var dlg = new ContentDialog
+        {
+            Title = "Multiplicar",
+            Content = panel,
+            PrimaryButtonText = "Multiplicar",
+            CloseButtonText = "Cancelar",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot,
+        };
+        if (await dlg.ShowAsync() != ContentDialogResult.Primary) return;
+        int n = ParseI(box.Text, 1, 1, 500);
+
+        int added = 0;
+        foreach (var img in _images.Where(_selected.Contains).ToList())
+        {
+            int idx = _images.IndexOf(img);
+            for (int k = 0; k < n; k++) { _images.Insert(idx + 1 + k, CloneImage(img)); added++; }
+        }
+        if (added > 0) { UpdateChrome(); PageCanvas.Invalidate(); }
     }
 
     private void RotateSelected()
@@ -692,7 +793,9 @@ public sealed partial class MainPage : Page
             var dest = new Rect(ox + cellX * scale, oy + cellY * scale, spanW * scale, spanH * scale);
             ImageRenderer.Draw(ds, img, dest, scale, _global);
             if (_global.CutGuides) DrawCutMarks(ds, dest);
-            if (_selected.Contains(img))
+            if (_dragging && img == _dragTarget)
+                ds.DrawRectangle(dest, ColorHelper.FromArgb(255, 0x16, 0xA3, 0x4A), 4f); // destino de reordenamiento
+            else if (_selected.Contains(img))
                 ds.DrawRectangle(dest, selStroke, 2.5f);
         }
 
@@ -1344,50 +1447,77 @@ public sealed partial class MainPage : Page
         "Arial" => 1, "Georgia" => 2, "Courier New" => 3, "Times New Roman" => 4, "Verdana" => 5, "Impact" => 6, _ => 0,
     };
 
-    // ---------- Impresión vectorial (CanvasPrintDocument) ----------
+    // ---------- Impresión directa a la impresora elegida (System.Drawing.Printing) ----------
 
-    private CanvasPrintDocument? _printDoc;
+    private void PopulatePrinters()
+    {
+        try
+        {
+            string def = "";
+            try { def = new System.Drawing.Printing.PrinterSettings().PrinterName; } catch { }
+            PrinterCombo.Items.Clear();
+            int sel = -1, i = 0;
+            foreach (string name in System.Drawing.Printing.PrinterSettings.InstalledPrinters)
+            {
+                PrinterCombo.Items.Add(name);
+                if (name == def) sel = i;
+                i++;
+            }
+            if (PrinterCombo.Items.Count > 0) PrinterCombo.SelectedIndex = sel >= 0 ? sel : 0;
+        }
+        catch { }
+    }
+
+    private string? SelectedPrinter => PrinterCombo?.SelectedItem as string;
+
+    private void OnPrinterConfig(object sender, RoutedEventArgs e)
+    {
+        var printer = SelectedPrinter;
+        if (string.IsNullOrEmpty(printer)) return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("rundll32.exe",
+                $"printui.dll,PrintUIEntry /e /n \"{printer}\"") { UseShellExecute = true });
+        }
+        catch (Exception ex) { _ = ShowInfo("Impresora", ex.Message); }
+    }
 
     private async void OnPrint(object sender, RoutedEventArgs e)
     {
         if (_images.Count == 0) return;
-        var hwnd = App.WindowHandle;
-        var manager = Windows.Graphics.Printing.PrintManagerInterop.GetForWindow(hwnd);
-        manager.PrintTaskRequested += OnPrintTaskRequested;
+        var printer = SelectedPrinter;
+        if (string.IsNullOrEmpty(printer)) { await ShowInfo("Imprimir", "No hay impresora seleccionada."); return; }
         try
         {
-            await Windows.Graphics.Printing.PrintManagerInterop.ShowPrintUIForWindowAsync(hwnd);
-        }
-        catch { /* el usuario canceló o la impresora falló */ }
-        finally
-        {
-            manager.PrintTaskRequested -= OnPrintTaskRequested;
-        }
-    }
-
-    private void OnPrintTaskRequested(Windows.Graphics.Printing.PrintManager sender,
-        Windows.Graphics.Printing.PrintTaskRequestedEventArgs args)
-    {
-        // El print doc comparte el device del lienzo para reusar los mismos bitmaps GPU.
-        _printDoc = new CanvasPrintDocument(PageCanvas.Device);
-        _printDoc.PrintTaskOptionsChanged += (doc, a) => doc.SetPageCount((uint)ComputePrintPageCount());
-        _printDoc.Preview += (doc, a) =>
-        {
-            var desc = a.PrintTaskOptions.GetPageDescription(a.PageNumber);
-            DrawPrintPage(a.DrawingSession, (int)a.PageNumber, desc.ImageableRect);
-        };
-        _printDoc.Print += (doc, a) =>
-        {
-            int count = ComputePrintPageCount();
-            for (uint p = 1; p <= count; p++)
+            int total = ComputePrintPageCount();
+            // Render de cada página a bitmap 300 DPI; GDI los imprime directo a la impresora elegida.
+            var pages = new List<System.Drawing.Bitmap>();
+            for (int p = 1; p <= total; p++)
             {
-                var desc = a.PrintTaskOptions.GetPageDescription(p);
-                using var ds = a.CreateDrawingSession();
-                DrawPrintPage(ds, (int)p, desc.ImageableRect);
+                byte[] png = await RenderPageJpegAsync(p, 300);
+                pages.Add(new System.Drawing.Bitmap(new MemoryStream(png)));
             }
-        };
 
-        args.Request.CreatePrintTask("Imprime+", req => req.SetSource(_printDoc));
+            using var doc = new System.Drawing.Printing.PrintDocument { DocumentName = "Imprime+" };
+            doc.PrinterSettings.PrinterName = printer;
+            doc.DefaultPageSettings.Margins = new System.Drawing.Printing.Margins(0, 0, 0, 0);
+            int idx = 0;
+            doc.PrintPage += (s, ev) =>
+            {
+                var bmp = pages[idx];
+                var pb = ev.PageBounds; // 1/100"
+                double sc = Math.Min((double)pb.Width / bmp.Width, (double)pb.Height / bmp.Height);
+                int w = (int)(bmp.Width * sc), h = (int)(bmp.Height * sc);
+                int x = pb.X + (pb.Width - w) / 2, y = pb.Y + (pb.Height - h) / 2;
+                ev.Graphics!.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                ev.Graphics.DrawImage(bmp, new System.Drawing.Rectangle(x, y, w, h));
+                idx++;
+                ev.HasMorePages = idx < pages.Count;
+            };
+            doc.Print();
+            foreach (var b in pages) b.Dispose();
+        }
+        catch (Exception ex) { await ShowInfo("Imprimir", "No se pudo imprimir: " + ex.Message); }
     }
 
     private int ComputePrintPageCount()
