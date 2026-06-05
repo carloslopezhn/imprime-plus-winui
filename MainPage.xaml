@@ -261,6 +261,115 @@
 
                                 <ToggleSwitch x:Name="MarginsToggle" OnContent="Márgenes activados" OffContent="Sin márgenes"
                                               Toggled="OnMarginsToggled" />
+                                <StackPanel x:Name="MarginsPanel" Spacing="6" Visibility="Collapsed">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Spacing="3">
+                                            <TextBlock Text="Superior" Style="{StaticResource FieldLabel}" />
+                                            <TextBox x:Name="MarginTopBox" Text="1" InputScope="Number" TextChanged="OnMarginFieldChanged" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="3">
+                                            <TextBlock Text="Inferior" Style="{StaticResource FieldLabel}" />
+                                            <TextBox x:Name="MarginBottomBox" Text="1" InputScope="Number" TextChanged="OnMarginFieldChanged" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Spacing="3">
+                                            <TextBlock Text="Izquierda" Style="{StaticResource FieldLabel}" />
+                                            <TextBox x:Name="MarginLeftBox" Text="1" InputScope="Number" TextChanged="OnMarginFieldChanged" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="3">
+                                            <TextBlock Text="Derecha" Style="{StaticResource FieldLabel}" />
+                                            <TextBox x:Name="MarginRightBox" Text="1" InputScope="Number" TextChanged="OnMarginFieldChanged" />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                                <ToggleSwitch x:Name="CutGuidesToggle" OnContent="Guías de corte" OffContent="Guías de corte"
+                                              Toggled="OnCutGuidesToggled" />
+                            </StackPanel>
+
+                            <!-- Imágenes (global) -->
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="IMÁGENES (GLOBAL)" Style="{StaticResource SectionTitle}" />
+                                <TextBlock Text="Forma" Style="{StaticResource FieldLabel}" />
+                                <ComboBox x:Name="GShape" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="OnGlobalChanged">
+                                    <ComboBoxItem Content="Rectángulo" />
+                                    <ComboBoxItem Content="Redondeado" />
+                                    <ComboBoxItem Content="Circular" />
+                                </ComboBox>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Spacing="3">
+                                        <TextBlock Text="Borde" Style="{StaticResource FieldLabel}" />
+                                        <Slider x:Name="GBorder" Minimum="0" Maximum="20" Value="0" ValueChanged="OnGlobalSlider" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Bottom">
+                                        <TextBlock Text="Color" Style="{StaticResource FieldLabel}" />
+                                        <Button Width="40" Height="30" Padding="0">
+                                            <Border x:Name="GBorderSwatch" Background="Black" Width="26" Height="16"
+                                                    BorderBrush="{StaticResource BorderBrush2}" BorderThickness="1" />
+                                            <Button.Flyout>
+                                                <Flyout>
+                                                    <ColorPicker x:Name="GBorderPicker" ColorSpectrumShape="Ring"
+                                                                 IsMoreButtonVisible="False" IsColorChannelTextInputVisible="False"
+                                                                 IsHexInputVisible="True" ColorChanged="OnGlobalBorderColor" />
+                                                </Flyout>
+                                            </Button.Flyout>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="Radio" Style="{StaticResource FieldLabel}" />
+                                <Slider x:Name="GRadius" Minimum="0" Maximum="80" Value="0" ValueChanged="OnGlobalSlider" />
+                                <TextBlock Text="Sombra" Style="{StaticResource FieldLabel}" />
+                                <ComboBox x:Name="GShadow" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="OnGlobalChanged">
+                                    <ComboBoxItem Content="Ninguna" />
+                                    <ComboBoxItem Content="Suave" />
+                                    <ComboBoxItem Content="Media" />
+                                    <ComboBoxItem Content="Fuerte" />
+                                </ComboBox>
+                                <TextBlock Text="Ajuste" Style="{StaticResource FieldLabel}" />
+                                <ComboBox x:Name="GFit" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="OnGlobalChanged">
+                                    <ComboBoxItem Content="Cubrir (recortar)" />
+                                    <ComboBoxItem Content="Contener (completa)" />
+                                    <ComboBoxItem Content="Estirar" />
+                                </ComboBox>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="Fondo celda" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" />
+                                    <Button Width="40" Height="28" Padding="0">
+                                        <Border x:Name="GCellSwatch" Background="White" Width="26" Height="14"
+                                                BorderBrush="{StaticResource BorderBrush2}" BorderThickness="1" />
+                                        <Button.Flyout>
+                                            <Flyout>
+                                                <ColorPicker x:Name="GCellPicker" ColorSpectrumShape="Ring"
+                                                             IsMoreButtonVisible="False" IsColorChannelTextInputVisible="False"
+                                                             IsAlphaEnabled="True" IsHexInputVisible="True" ColorChanged="OnGlobalCellBg" />
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                </StackPanel>
+                                <TextBlock Text="Alineación horizontal" Style="{StaticResource FieldLabel}" />
+                                <ComboBox x:Name="GAlignH" HorizontalAlignment="Stretch" SelectedIndex="1" SelectionChanged="OnGlobalChanged">
+                                    <ComboBoxItem Content="Izquierda" />
+                                    <ComboBoxItem Content="Centro" />
+                                    <ComboBoxItem Content="Derecha" />
+                                    <ComboBoxItem Content="Justificado" />
+                                </ComboBox>
+                                <TextBlock Text="Alineación vertical" Style="{StaticResource FieldLabel}" />
+                                <ComboBox x:Name="GAlignV" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="OnGlobalChanged">
+                                    <ComboBoxItem Content="Arriba" />
+                                    <ComboBoxItem Content="Centro" />
+                                    <ComboBoxItem Content="Abajo" />
+                                </ComboBox>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
@@ -342,6 +451,7 @@
                                     <StackPanel Spacing="3">
                                         <TextBlock Text="Ajuste" Style="{StaticResource FieldLabel}" />
                                         <ComboBox x:Name="InsFit" HorizontalAlignment="Stretch" SelectionChanged="OnInsFitChanged">
+                                            <ComboBoxItem Content="- Usar global -" />
                                             <ComboBoxItem Content="Cubrir" />
                                             <ComboBoxItem Content="Contener" />
                                             <ComboBoxItem Content="Estirar" />
@@ -350,8 +460,33 @@
                                     <TextBlock Text="Zoom interno" Style="{StaticResource FieldLabel}" />
                                     <Slider x:Name="InsZoom" Minimum="20" Maximum="300" Value="100"
                                             ValueChanged="OnInsZoomChanged" />
-                                    <Button Content="Rotar 90°" HorizontalAlignment="Stretch" Click="OnInsRotate" />
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Spacing="3">
+                                            <TextBlock Text="Offset X" Style="{StaticResource FieldLabel}" />
+                                            <Slider x:Name="InsOffsetX" Minimum="-50" Maximum="50" Value="0" ValueChanged="OnInsOffsetChanged" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="3">
+                                            <TextBlock Text="Offset Y" Style="{StaticResource FieldLabel}" />
+                                            <Slider x:Name="InsOffsetY" Minimum="-50" Maximum="50" Value="0" ValueChanged="OnInsOffsetChanged" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" Content="↺ Rotar izq" HorizontalAlignment="Stretch" Click="OnInsRotateLeft" />
+                                        <Button Grid.Column="1" Content="Rotar der ↻" HorizontalAlignment="Stretch" Click="OnInsRotate" />
+                                    </Grid>
                                     <Button Content="Quitar fondo" HorizontalAlignment="Stretch" Click="OnRemoveBg" />
+                                    <Button x:Name="InsRestoreBtn" Content="Restaurar original" HorizontalAlignment="Stretch"
+                                            Click="OnRestoreOriginal" Visibility="Collapsed" />
+                                    <Button Content="Eliminar imagen" HorizontalAlignment="Stretch" Click="OnInsDelete"
+                                            Foreground="{StaticResource DangerBrush}" BorderBrush="{StaticResource DangerBrush}" />
                                 </StackPanel>
 
                                 <!-- Forma y borde -->
@@ -360,6 +495,7 @@
                                     <StackPanel Spacing="3">
                                         <TextBlock Text="Forma" Style="{StaticResource FieldLabel}" />
                                         <ComboBox x:Name="InsShape" HorizontalAlignment="Stretch" SelectionChanged="OnInsShapeChanged">
+                                            <ComboBoxItem Content="- Usar global -" />
                                             <ComboBoxItem Content="Rectángulo" />
                                             <ComboBoxItem Content="Redondeado" />
                                             <ComboBoxItem Content="Circular" />
@@ -400,6 +536,14 @@
                                     <Slider x:Name="InsGrayscale" Minimum="0" Maximum="100" Value="0" ValueChanged="OnInsFilterChanged" />
                                     <TextBlock Text="Sepia" Style="{StaticResource FieldLabel}" />
                                     <Slider x:Name="InsSepia" Minimum="0" Maximum="100" Value="0" ValueChanged="OnInsFilterChanged" />
+                                    <TextBlock Text="Tono" Style="{StaticResource FieldLabel}" />
+                                    <Slider x:Name="InsHue" Minimum="0" Maximum="360" Value="0" ValueChanged="OnInsFilterChanged" />
+                                    <TextBlock Text="Desenfoque" Style="{StaticResource FieldLabel}" />
+                                    <Slider x:Name="InsBlur" Minimum="0" Maximum="10" StepFrequency="0.5" Value="0" ValueChanged="OnInsFilterChanged" />
+                                    <TextBlock Text="Invertir" Style="{StaticResource FieldLabel}" />
+                                    <Slider x:Name="InsInvert" Minimum="0" Maximum="100" Value="0" ValueChanged="OnInsFilterChanged" />
+                                    <TextBlock Text="Opacidad" Style="{StaticResource FieldLabel}" />
+                                    <Slider x:Name="InsOpacity" Minimum="0" Maximum="100" Value="100" ValueChanged="OnInsFilterChanged" />
                                     <Button Content="Restablecer filtros" HorizontalAlignment="Stretch" Click="OnInsResetFilters" />
                                 </StackPanel>
 
@@ -416,6 +560,58 @@
                                             <ComboBoxItem Content="Arriba" />
                                             <ComboBoxItem Content="Encima" />
                                         </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="Origen" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox x:Name="InsCaptionSource" HorizontalAlignment="Stretch" SelectionChanged="OnInsCaptionSourceChanged">
+                                            <ComboBoxItem Content="Manual" />
+                                            <ComboBoxItem Content="Nombre de archivo" />
+                                            <ComboBoxItem Content="Numeración" />
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="Tipografía" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox x:Name="InsCaptionFont" HorizontalAlignment="Stretch" SelectionChanged="OnInsCaptionStyleChanged">
+                                            <ComboBoxItem Content="Segoe UI" />
+                                            <ComboBoxItem Content="Arial" />
+                                            <ComboBoxItem Content="Georgia" />
+                                            <ComboBoxItem Content="Courier New" />
+                                            <ComboBoxItem Content="Times New Roman" />
+                                            <ComboBoxItem Content="Verdana" />
+                                            <ComboBoxItem Content="Impact" />
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <TextBlock Text="Tamaño de fuente" Style="{StaticResource FieldLabel}" />
+                                    <Slider x:Name="InsCaptionSize" Minimum="6" Maximum="48" Value="14" ValueChanged="OnInsCaptionSlider" />
+                                    <StackPanel Orientation="Horizontal" Spacing="14">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="Texto" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" />
+                                            <Button Width="38" Height="26" Padding="0">
+                                                <Border x:Name="InsCapColorSwatch" Background="White" Width="24" Height="14"
+                                                        BorderBrush="{StaticResource BorderBrush2}" BorderThickness="1" />
+                                                <Button.Flyout>
+                                                    <Flyout>
+                                                        <ColorPicker x:Name="InsCapColorPicker" ColorSpectrumShape="Ring"
+                                                                     IsMoreButtonVisible="False" IsColorChannelTextInputVisible="False"
+                                                                     IsHexInputVisible="True" ColorChanged="OnInsCaptionColor" />
+                                                    </Flyout>
+                                                </Button.Flyout>
+                                            </Button>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="Fondo" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" />
+                                            <Button Width="38" Height="26" Padding="0">
+                                                <Border x:Name="InsCapBgSwatch" Background="#8C000000" Width="24" Height="14"
+                                                        BorderBrush="{StaticResource BorderBrush2}" BorderThickness="1" />
+                                                <Button.Flyout>
+                                                    <Flyout>
+                                                        <ColorPicker x:Name="InsCapBgPicker" ColorSpectrumShape="Ring"
+                                                                     IsMoreButtonVisible="False" IsColorChannelTextInputVisible="False"
+                                                                     IsAlphaEnabled="True" IsHexInputVisible="True" ColorChanged="OnInsCaptionBg" />
+                                                    </Flyout>
+                                                </Button.Flyout>
+                                            </Button>
+                                        </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>

@@ -9,15 +9,14 @@ using Windows.UI;
 namespace ImprimePlus.Editor;
 
 /// <summary>
-/// Dibuja UNA imagen del editor en su celda: forma (recorte por geometría),
-/// sombra, fondo, imagen con filtros GPU (CanvasEffects) + fit/zoom/rotación,
-/// borde y caption. La misma rutina se usará para imprimir (vectorial).
+/// Dibuja UNA imagen del editor en su celda: forma, sombra, fondo, imagen con
+/// filtros GPU + fit/zoom/rotación/alineación, borde y caption. Resuelve los
+/// valores efectivos contra <see cref="GlobalDefaults"/>. Misma rutina para imprimir.
 /// </summary>
 public static class ImageRenderer
 {
-    public static void Draw(CanvasDrawingSession ds, EditorImage img, Rect cell, double scale)
+    public static void Draw(CanvasDrawingSession ds, EditorImage img, Rect cell, double scale, GlobalDefaults g)
     {
-        // 1) Reservar banda para caption arriba/abajo.
         Rect imageRect = cell;
         Rect? captionRect = null;
         bool hasCaption = img.CaptionPos != CaptionPosition.None && !string.IsNullOrWhiteSpace(img.CaptionText);
@@ -31,7 +30,7 @@ public static class ImageRenderer
                 imageRect = new Rect(cell.X, cell.Y, cell.Width, cell.Height - band);
                 captionRect = new Rect(cell.X, cell.Y + cell.Height - band, cell.Width, band);
             }
-            else // Above
+            else
             {
                 imageRect = new Rect(cell.X, cell.Y + band, cell.Width, cell.Height - band);
                 captionRect = new Rect(cell.X, cell.Y, cell.Width, band);
@@ -45,34 +44,34 @@ public static class ImageRenderer
 
         if (imageRect.Width <= 0 || imageRect.Height <= 0) return;
 
-        double radius = img.CornerRadius * scale;
-        using var geo = BuildGeometry(ds, img.Shape, imageRect, radius);
+        var shape = img.EffShape(g);
+        double radius = img.EffCornerRadius(g) * scale;
+        using var geo = BuildGeometry(ds, shape, imageRect, radius);
 
-        // 2) Sombra (geometría desplazada, translúcida).
-        if (img.Shadow != ShadowStrength.None)
+        var shadow = img.EffShadow(g);
+        if (shadow != ShadowStrength.None)
         {
-            var (a, dx, dy) = img.Shadow switch
+            var (a, dx, dy) = shadow switch
             {
                 ShadowStrength.Soft => ((byte)40, 2.0, 3.0),
                 ShadowStrength.Medium => ((byte)70, 4.0, 6.0),
                 _ => ((byte)110, 6.0, 9.0),
             };
             var soff = new Rect(imageRect.X + dx * scale, imageRect.Y + dy * scale, imageRect.Width, imageRect.Height);
-            using var sgeo = BuildGeometry(ds, img.Shape, soff, radius);
+            using var sgeo = BuildGeometry(ds, shape, soff, radius);
             ds.FillGeometry(sgeo, Color.FromArgb(a, 0, 0, 0));
         }
 
-        // 3) Fondo de celda.
-        if (img.BackgroundColor.A > 0) ds.FillGeometry(geo, img.BackgroundColor);
+        var bg = img.EffBgColor(g);
+        if (bg.A > 0) ds.FillGeometry(geo, bg);
 
-        // 4) Imagen (con filtros GPU) recortada a la forma.
         var (image, disposables) = BuildFiltered(img);
         try
         {
             using (ds.CreateLayer(1f, geo))
             {
                 var prev = ds.Transform;
-                ds.Transform = ComputeTransform(img, imageRect);
+                ds.Transform = ComputeTransform(img, imageRect, img.EffFit(g), g.AlignH, g.AlignV);
                 ds.DrawImage(image, 0f, 0f);
                 ds.Transform = prev;
             }
@@ -82,11 +81,9 @@ public static class ImageRenderer
             foreach (var d in disposables) d.Dispose();
         }
 
-        // 5) Borde a lo largo de la forma.
-        if (img.BorderWidth > 0)
-            ds.DrawGeometry(geo, img.BorderColor, (float)(img.BorderWidth * scale));
+        double bw = img.EffBorderWidth(g);
+        if (bw > 0) ds.DrawGeometry(geo, img.EffBorderColor(g), (float)(bw * scale));
 
-        // 6) Caption.
         if (captionRect is Rect cr && hasCaption)
         {
             if (img.CaptionBg.A > 0) ds.FillRectangle(cr, img.CaptionBg);
@@ -102,7 +99,7 @@ public static class ImageRenderer
         }
     }
 
-    // ---------- Geometría de forma ----------
+    // ---------- Geometría ----------
 
     private static CanvasGeometry BuildGeometry(ICanvasResourceCreator rc, ImageShape shape, Rect r, double radius)
     {
@@ -151,7 +148,7 @@ public static class ImageRenderer
         return pts;
     }
 
-    // ---------- Filtros (cadena de CanvasEffects en GPU) ----------
+    // ---------- Filtros GPU ----------
 
     private static (ICanvasImage image, List<IDisposable> disposables) BuildFiltered(EditorImage img)
     {
@@ -169,7 +166,6 @@ public static class ImageRenderer
             var e = new ContrastEffect { Source = cur, Contrast = (float)Math.Clamp(img.Contrast - 1.0, -1.0, 1.0) };
             disp.Add(e); cur = e;
         }
-        // Saturación + grayscale combinados: el grayscale es desaturación (CSS-like).
         double satUI = img.Saturation * (1.0 - Math.Clamp(img.Grayscale, 0.0, 1.0));
         if (Math.Abs(satUI - 1.0) > 1e-6 || img.Grayscale > 0)
         {
@@ -181,36 +177,81 @@ public static class ImageRenderer
             var e = new SepiaEffect { Source = cur, Intensity = (float)Math.Clamp(img.Sepia, 0.0, 1.0) };
             disp.Add(e); cur = e;
         }
+        if (img.Hue != 0)
+        {
+            var e = new HueRotationEffect { Source = cur, Angle = (float)(img.Hue * Math.PI / 180.0) };
+            disp.Add(e); cur = e;
+        }
+        if (img.Invert > 0)
+        {
+            // Invert parcial vía transferencia lineal por canal: out = (1-2a)*in + a.
+            float a = (float)Math.Clamp(img.Invert, 0, 1);
+            var e = new GammaTransferEffect
+            {
+                Source = cur,
+                RedAmplitude = 1 - 2 * a, RedOffset = a, RedExponent = 1,
+                GreenAmplitude = 1 - 2 * a, GreenOffset = a, GreenExponent = 1,
+                BlueAmplitude = 1 - 2 * a, BlueOffset = a, BlueExponent = 1,
+            };
+            disp.Add(e); cur = e;
+        }
+        if (img.Blur > 0)
+        {
+            var e = new GaussianBlurEffect { Source = cur, BlurAmount = (float)Math.Clamp(img.Blur, 0, 20) };
+            disp.Add(e); cur = e;
+        }
+        if (img.Opacity < 1.0)
+        {
+            var e = new OpacityEffect { Source = cur, Opacity = (float)Math.Clamp(img.Opacity, 0, 1) };
+            disp.Add(e); cur = e;
+        }
         return (cur, disp);
     }
 
-    // ---------- Transform de fit/zoom/rotación ----------
+    // ---------- Transform fit/zoom/rotación/alineación ----------
 
-    private static Matrix3x2 ComputeTransform(EditorImage img, Rect rect)
+    private static Matrix3x2 ComputeTransform(EditorImage img, Rect rect, FitMode fit, AlignH ah, AlignV av)
     {
         var bmp = img.Bitmap;
         float bw = (float)bmp.Size.Width, bh = (float)bmp.Size.Height;
         bool quarter = ((int)Math.Round(img.RotationDeg / 90.0)) % 2 != 0;
         float ebw = quarter ? bh : bw;
         float ebh = quarter ? bw : bh;
-        var center = new Vector2((float)(rect.X + rect.Width / 2), (float)(rect.Y + rect.Height / 2));
-        var offset = new Vector2((float)(img.OffsetX * rect.Width), (float)(img.OffsetY * rect.Height));
         float rot = (float)(img.RotationDeg * Math.PI / 180.0);
+        var offset = new Vector2((float)(img.OffsetX * rect.Width), (float)(img.OffsetY * rect.Height));
 
-        if (img.Fit == FitMode.Stretch)
+        if (fit == FitMode.Stretch)
         {
             float sx = (float)(rect.Width / ebw), sy = (float)(rect.Height / ebh);
+            var c = new Vector2((float)(rect.X + rect.Width / 2), (float)(rect.Y + rect.Height / 2));
             return Matrix3x2.CreateTranslation(-bw / 2f, -bh / 2f)
                  * Matrix3x2.CreateScale(quarter ? sy : sx, quarter ? sx : sy)
                  * Matrix3x2.CreateRotation(rot)
-                 * Matrix3x2.CreateTranslation(center + offset);
+                 * Matrix3x2.CreateTranslation(c + offset);
         }
 
         double sxu = rect.Width / ebw, syu = rect.Height / ebh;
-        double s = (img.Fit == FitMode.Contain ? Math.Min(sxu, syu) : Math.Max(sxu, syu)) * img.Zoom;
+        double s = (fit == FitMode.Contain ? Math.Min(sxu, syu) : Math.Max(sxu, syu)) * img.Zoom;
+        double sw = ebw * s, sh = ebh * s;
+
+        // Centro según alineación (sólo relevante en Contener, donde queda hueco).
+        double cx = ah switch
+        {
+            AlignH.Left => rect.X + sw / 2,
+            AlignH.Right => rect.X + rect.Width - sw / 2,
+            _ => rect.X + rect.Width / 2,
+        };
+        double cy = av switch
+        {
+            AlignV.Top => rect.Y + sh / 2,
+            AlignV.Bottom => rect.Y + rect.Height - sh / 2,
+            _ => rect.Y + rect.Height / 2,
+        };
+        var center = new Vector2((float)cx, (float)cy) + offset;
+
         return Matrix3x2.CreateTranslation(-bw / 2f, -bh / 2f)
              * Matrix3x2.CreateScale((float)s)
              * Matrix3x2.CreateRotation(rot)
-             * Matrix3x2.CreateTranslation(center + offset);
+             * Matrix3x2.CreateTranslation(center);
     }
 }

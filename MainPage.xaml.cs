@@ -74,6 +74,9 @@ public sealed partial class MainPage : Page
     // Página visible (vista de una página + barra de navegación inferior).
     private int _currentPage;
 
+    // Defaults globales de imagen (sección "Imágenes (global)" del panel izquierdo).
+    private readonly GlobalDefaults _global = new();
+
     private const double PageGap = 40;   // separación entre páginas (unidades world)
     private const double Pad = 32;       // margen de la hoja al viewport
 
@@ -121,7 +124,16 @@ public sealed partial class MainPage : Page
         ImgHBox.Text = _config.ImgHeight.ToString(inv);
         SpacingHBox.Text = _config.SpacingH.ToString(inv);
         SpacingVBox.Text = _config.SpacingV.ToString(inv);
-        MarginsToggle.IsOn = _config.MarginTop > 0;
+        bool hasMargins = _config.MarginTop > 0 || _config.MarginBottom > 0 || _config.MarginLeft > 0 || _config.MarginRight > 0;
+        MarginsToggle.IsOn = hasMargins;
+        MarginsPanel.Visibility = hasMargins ? Visibility.Visible : Visibility.Collapsed;
+        if (hasMargins)
+        {
+            MarginTopBox.Text = _config.MarginTop.ToString(inv);
+            MarginBottomBox.Text = _config.MarginBottom.ToString(inv);
+            MarginLeftBox.Text = _config.MarginLeft.ToString(inv);
+            MarginRightBox.Text = _config.MarginRight.ToString(inv);
+        }
     }
 
     private void OnCreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args)
@@ -489,17 +501,33 @@ public sealed partial class MainPage : Page
     {
         var menu = new MenuFlyout();
 
-        var dup = new MenuFlyoutItem { Text = "Duplicar" };
-        dup.Click += (_, _) => DuplicateSelected();
-        menu.Items.Add(dup);
+        var bg = new MenuFlyoutItem { Text = "Borrar fondo (IA)" };
+        bg.Click += (_, _) => OnRemoveBg(this, new RoutedEventArgs());
+        menu.Items.Add(bg);
+
+        menu.Items.Add(new MenuFlyoutSeparator());
 
         var rot = new MenuFlyoutItem { Text = "Rotar 90°" };
         rot.Click += (_, _) => RotateSelected();
         menu.Items.Add(rot);
 
+        var dup = new MenuFlyoutItem { Text = "Duplicar" };
+        dup.Click += (_, _) => DuplicateSelected();
+        menu.Items.Add(dup);
+
         menu.Items.Add(new MenuFlyoutSeparator());
 
-        var del = new MenuFlyoutItem { Text = "Eliminar" };
+        var exH = new MenuFlyoutItem { Text = "Ampliar horizontalmente" };
+        exH.Click += (_, _) => ExpandSelected(horizontal: true);
+        menu.Items.Add(exH);
+
+        var exV = new MenuFlyoutItem { Text = "Ampliar verticalmente" };
+        exV.Click += (_, _) => ExpandSelected(horizontal: false);
+        menu.Items.Add(exV);
+
+        menu.Items.Add(new MenuFlyoutSeparator());
+
+        var del = new MenuFlyoutItem { Text = "Limpiar espacio (eliminar)" };
         del.Click += (_, _) => DeleteSelected();
         menu.Items.Add(del);
 
@@ -513,12 +541,14 @@ public sealed partial class MainPage : Page
         {
             var c = new EditorImage($"img{++_idSeq}", img.Bitmap)
             {
-                SourcePath = img.SourcePath,
-                Fit = img.Fit,
-                Zoom = img.Zoom,
-                OffsetX = img.OffsetX,
-                OffsetY = img.OffsetY,
-                RotationDeg = img.RotationDeg,
+                SourcePath = img.SourcePath, SourceBytes = img.SourceBytes,
+                Fit = img.Fit, Zoom = img.Zoom, OffsetX = img.OffsetX, OffsetY = img.OffsetY, RotationDeg = img.RotationDeg,
+                Shape = img.Shape, CornerRadius = img.CornerRadius, BorderWidth = img.BorderWidth,
+                BorderColor = img.BorderColor, BackgroundColor = img.BackgroundColor, Shadow = img.Shadow,
+                Brightness = img.Brightness, Contrast = img.Contrast, Saturation = img.Saturation,
+                Grayscale = img.Grayscale, Sepia = img.Sepia, Hue = img.Hue, Blur = img.Blur, Invert = img.Invert, Opacity = img.Opacity,
+                CaptionText = img.CaptionText, CaptionPos = img.CaptionPos, CaptionFont = img.CaptionFont,
+                CaptionSize = img.CaptionSize, CaptionColor = img.CaptionColor, CaptionBg = img.CaptionBg,
             };
             c.Overrides.ColSpan = img.Overrides.ColSpan;
             c.Overrides.RowSpan = img.Overrides.RowSpan;
@@ -533,6 +563,19 @@ public sealed partial class MainPage : Page
     {
         foreach (var img in _selected)
             img.RotationDeg = (img.RotationDeg + 90) % 360;
+        if (_selected.Count > 0) PageCanvas.Invalidate();
+    }
+
+    private void ExpandSelected(bool horizontal)
+    {
+        var layout = LayoutEngine.ComputeLayout(_config);
+        foreach (var img in _selected)
+        {
+            if (horizontal)
+                img.Overrides.ColSpan = img.Overrides.ColSpan < layout.Cols ? img.Overrides.ColSpan + 1 : 1;
+            else
+                img.Overrides.RowSpan = img.Overrides.RowSpan < layout.Rows ? img.Overrides.RowSpan + 1 : 1;
+        }
         if (_selected.Count > 0) PageCanvas.Invalidate();
     }
 
@@ -641,7 +684,8 @@ public sealed partial class MainPage : Page
             double spanW = pl.ColSpan * layout.CellW + (pl.ColSpan - 1) * layout.SpacingH;
             double spanH = pl.RowSpan * layout.CellH + (pl.RowSpan - 1) * layout.SpacingV;
             var dest = new Rect(ox + cellX * scale, oy + cellY * scale, spanW * scale, spanH * scale);
-            ImageRenderer.Draw(ds, img, dest, scale);
+            ImageRenderer.Draw(ds, img, dest, scale, _global);
+            if (_global.CutGuides) DrawCutMarks(ds, dest);
             if (_selected.Contains(img))
                 ds.DrawRectangle(dest, selStroke, 2.5f);
         }
@@ -651,6 +695,18 @@ public sealed partial class MainPage : Page
         _lastOy = oy;
         _lastLayout = layout;
         _lastPages = new List<List<Placement>> { placements };
+    }
+
+    private static void DrawCutMarks(CanvasDrawingSession ds, Rect r)
+    {
+        Color c = ColorHelper.FromArgb(255, 0x33, 0x33, 0x33);
+        const float len = 9f, w = 0.8f;
+        float x0 = (float)r.X, y0 = (float)r.Y, x1 = (float)(r.X + r.Width), y1 = (float)(r.Y + r.Height);
+        // Marcas en L en las 4 esquinas.
+        ds.DrawLine(x0, y0, x0 + len, y0, c, w); ds.DrawLine(x0, y0, x0, y0 + len, c, w);
+        ds.DrawLine(x1, y0, x1 - len, y0, c, w); ds.DrawLine(x1, y0, x1, y0 + len, c, w);
+        ds.DrawLine(x0, y1, x0 + len, y1, c, w); ds.DrawLine(x0, y1, x0, y1 - len, c, w);
+        ds.DrawLine(x1, y1, x1 - len, y1, c, w); ds.DrawLine(x1, y1, x1, y1 - len, c, w);
     }
 
     // ---------- Modo póster ----------
@@ -924,9 +980,67 @@ public sealed partial class MainPage : Page
     private void OnMarginsToggled(object sender, RoutedEventArgs e)
     {
         if (!_ready) return;
-        double m = MarginsToggle.IsOn ? 1.0 : 0.0; // cm (UI de 4 márgenes vendrá luego)
-        _config.MarginTop = _config.MarginRight = _config.MarginBottom = _config.MarginLeft = m;
+        MarginsPanel.Visibility = MarginsToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
+        if (MarginsToggle.IsOn) ApplyMargins();
+        else _config.MarginTop = _config.MarginRight = _config.MarginBottom = _config.MarginLeft = 0;
         SettingsStore.Save(_config);
+        PageCanvas.Invalidate();
+    }
+
+    private void OnMarginFieldChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!_ready) return;
+        ApplyMargins();
+        SettingsStore.Save(_config);
+        PageCanvas.Invalidate();
+    }
+
+    private void ApplyMargins()
+    {
+        _config.MarginTop = Math.Max(0, ParseD(MarginTopBox?.Text, _config.MarginTop));
+        _config.MarginBottom = Math.Max(0, ParseD(MarginBottomBox?.Text, _config.MarginBottom));
+        _config.MarginLeft = Math.Max(0, ParseD(MarginLeftBox?.Text, _config.MarginLeft));
+        _config.MarginRight = Math.Max(0, ParseD(MarginRightBox?.Text, _config.MarginRight));
+    }
+
+    // ---------- Defaults globales de imagen (panel izquierdo) ----------
+
+    private void OnGlobalChanged(object sender, SelectionChangedEventArgs e) { if (_ready) ApplyGlobal(); }
+    private void OnGlobalSlider(object sender, RangeBaseValueChangedEventArgs e) { if (_ready) ApplyGlobal(); }
+
+    private void ApplyGlobal()
+    {
+        if (GShape.SelectedIndex >= 0) _global.Shape = (ImageShape)GShape.SelectedIndex;
+        _global.BorderWidth = GBorder.Value;
+        _global.CornerRadius = GRadius.Value;
+        if (GShadow.SelectedIndex >= 0) _global.Shadow = (ShadowStrength)GShadow.SelectedIndex;
+        if (GFit.SelectedIndex >= 0) _global.Fit = (FitMode)GFit.SelectedIndex;
+        if (GAlignH.SelectedIndex >= 0) _global.AlignH = (AlignH)GAlignH.SelectedIndex;
+        if (GAlignV.SelectedIndex >= 0) _global.AlignV = (AlignV)GAlignV.SelectedIndex;
+        UpdateInspector();
+        PageCanvas.Invalidate();
+    }
+
+    private void OnGlobalBorderColor(ColorPicker sender, ColorChangedEventArgs args)
+    {
+        if (!_ready) return;
+        _global.BorderColor = args.NewColor;
+        if (GBorderSwatch is not null) GBorderSwatch.Background = new SolidColorBrush(args.NewColor);
+        PageCanvas.Invalidate();
+    }
+
+    private void OnGlobalCellBg(ColorPicker sender, ColorChangedEventArgs args)
+    {
+        if (!_ready) return;
+        _global.CellBg = args.NewColor;
+        if (GCellSwatch is not null) GCellSwatch.Background = new SolidColorBrush(args.NewColor);
+        PageCanvas.Invalidate();
+    }
+
+    private void OnCutGuidesToggled(object sender, RoutedEventArgs e)
+    {
+        if (!_ready) return;
+        _global.CutGuides = CutGuidesToggle.IsOn;
         PageCanvas.Invalidate();
     }
 
@@ -958,20 +1072,34 @@ public sealed partial class MainPage : Page
         if (img is null) return;
 
         _syncingInspector = true;
-        InsFit.SelectedIndex = (int)img.Fit;
+        InsFit.SelectedIndex = img.Fit is null ? 0 : (int)img.Fit.Value + 1;
         InsZoom.Value = img.Zoom * 100;
-        InsShape.SelectedIndex = (int)img.Shape;
-        InsRadius.Value = img.CornerRadius;
-        InsBorder.Value = img.BorderWidth;
-        SetSwatch(img.BorderColor);
-        InsBorderPicker.Color = img.BorderColor;
+        InsShape.SelectedIndex = img.Shape is null ? 0 : (int)img.Shape.Value + 1;
+        InsRadius.Value = img.EffCornerRadius(_global);
+        InsBorder.Value = img.EffBorderWidth(_global);
+        SetSwatch(img.EffBorderColor(_global));
+        InsBorderPicker.Color = img.EffBorderColor(_global);
         InsBrightness.Value = img.Brightness * 100;
         InsContrast.Value = img.Contrast * 100;
         InsSaturation.Value = img.Saturation * 100;
         InsGrayscale.Value = img.Grayscale * 100;
         InsSepia.Value = img.Sepia * 100;
+        InsHue.Value = img.Hue;
+        InsBlur.Value = img.Blur;
+        InsInvert.Value = img.Invert * 100;
+        InsOpacity.Value = img.Opacity * 100;
+        InsOffsetX.Value = img.OffsetX * 100;
+        InsOffsetY.Value = img.OffsetY * 100;
         InsCaptionText.Text = img.CaptionText;
         InsCaptionPos.SelectedIndex = (int)img.CaptionPos;
+        InsCaptionSource.SelectedIndex = 0;
+        InsCaptionFont.SelectedIndex = CaptionFontIndex(img.CaptionFont);
+        InsCaptionSize.Value = img.CaptionSize;
+        if (InsCapColorSwatch is not null) InsCapColorSwatch.Background = new SolidColorBrush(img.CaptionColor);
+        InsCapColorPicker.Color = img.CaptionColor;
+        if (InsCapBgSwatch is not null) InsCapBgSwatch.Background = new SolidColorBrush(img.CaptionBg);
+        InsCapBgPicker.Color = img.CaptionBg;
+        InsRestoreBtn.Visibility = img.OriginalBitmap is not null ? Visibility.Visible : Visibility.Collapsed;
         _syncingInspector = false;
     }
 
@@ -990,7 +1118,7 @@ public sealed partial class MainPage : Page
     private void OnInsFitChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_syncingInspector || InsFit.SelectedIndex < 0) return;
-        ApplyToSelected(i => i.Fit = (FitMode)InsFit.SelectedIndex);
+        ApplyToSelected(i => i.Fit = InsFit.SelectedIndex <= 0 ? (FitMode?)null : (FitMode)(InsFit.SelectedIndex - 1));
     }
 
     private void OnInsZoomChanged(object sender, RangeBaseValueChangedEventArgs e)
@@ -1001,6 +1129,32 @@ public sealed partial class MainPage : Page
 
     private void OnInsRotate(object sender, RoutedEventArgs e) => RotateSelected();
 
+    private void OnInsRotateLeft(object sender, RoutedEventArgs e)
+    {
+        foreach (var img in _selected) img.RotationDeg = (img.RotationDeg + 270) % 360;
+        if (_selected.Count > 0) PageCanvas.Invalidate();
+    }
+
+    private void OnInsOffsetChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_syncingInspector) return;
+        ApplyToSelected(i => { i.OffsetX = InsOffsetX.Value / 100.0; i.OffsetY = InsOffsetY.Value / 100.0; });
+    }
+
+    private void OnInsDelete(object sender, RoutedEventArgs e) => DeleteSelected();
+
+    private void OnRestoreOriginal(object sender, RoutedEventArgs e)
+    {
+        var img = Primary;
+        if (img?.OriginalBitmap is null) return;
+        img.Bitmap = img.OriginalBitmap;
+        img.SourceBytes = img.OriginalBytes;
+        img.SourcePath = img.OriginalPath;
+        img.OriginalBitmap = null; img.OriginalBytes = null; img.OriginalPath = null;
+        UpdateInspector();
+        PageCanvas.Invalidate();
+    }
+
     private BgRemover? _bg;
 
     private async void OnRemoveBg(object sender, RoutedEventArgs e)
@@ -1010,6 +1164,7 @@ public sealed partial class MainPage : Page
         try
         {
             await RemoveBgCoreAsync(img);
+            UpdateInspector();
             PageCanvas.Invalidate();
         }
         catch (Exception ex)
@@ -1041,6 +1196,14 @@ public sealed partial class MainPage : Page
 
         var cut = CanvasBitmap.CreateFromBytes(PageCanvas.Device, outBgra, w, h,
             DirectXPixelFormat.B8G8R8A8UIntNormalized, 96, Microsoft.Graphics.Canvas.CanvasAlphaMode.Premultiplied);
+
+        // Backup del original (una sola vez) para "Restaurar original".
+        if (img.OriginalBitmap is null)
+        {
+            img.OriginalBitmap = img.Bitmap;
+            img.OriginalBytes = img.SourceBytes;
+            img.OriginalPath = img.SourcePath;
+        }
         img.Bitmap = cut;
 
         // Guardar PNG con alfa para recargar en device-lost.
@@ -1059,7 +1222,7 @@ public sealed partial class MainPage : Page
     private void OnInsShapeChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_syncingInspector || InsShape.SelectedIndex < 0) return;
-        ApplyToSelected(i => i.Shape = (ImageShape)InsShape.SelectedIndex);
+        ApplyToSelected(i => i.Shape = InsShape.SelectedIndex <= 0 ? (ImageShape?)null : (ImageShape)(InsShape.SelectedIndex - 1));
     }
 
     private void OnInsRadiusChanged(object sender, RangeBaseValueChangedEventArgs e)
@@ -1091,12 +1254,20 @@ public sealed partial class MainPage : Page
             i.Saturation = InsSaturation.Value / 100.0;
             i.Grayscale = InsGrayscale.Value / 100.0;
             i.Sepia = InsSepia.Value / 100.0;
+            i.Hue = InsHue.Value;
+            i.Blur = InsBlur.Value;
+            i.Invert = InsInvert.Value / 100.0;
+            i.Opacity = InsOpacity.Value / 100.0;
         });
     }
 
     private void OnInsResetFilters(object sender, RoutedEventArgs e)
     {
-        ApplyToSelected(i => { i.Brightness = 1; i.Contrast = 1; i.Saturation = 1; i.Grayscale = 0; i.Sepia = 0; });
+        ApplyToSelected(i =>
+        {
+            i.Brightness = 1; i.Contrast = 1; i.Saturation = 1; i.Grayscale = 0; i.Sepia = 0;
+            i.Hue = 0; i.Blur = 0; i.Invert = 0; i.Opacity = 1;
+        });
         UpdateInspector();
     }
 
@@ -1111,6 +1282,61 @@ public sealed partial class MainPage : Page
         if (_syncingInspector || InsCaptionPos.SelectedIndex < 0) return;
         ApplyToSelected(i => i.CaptionPos = (CaptionPosition)InsCaptionPos.SelectedIndex);
     }
+
+    private void OnInsCaptionStyleChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncingInspector) return;
+        var f = (InsCaptionFont.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Segoe UI";
+        ApplyToSelected(i => i.CaptionFont = f);
+    }
+
+    private void OnInsCaptionSlider(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_syncingInspector) return;
+        ApplyToSelected(i => i.CaptionSize = InsCaptionSize.Value);
+    }
+
+    private void OnInsCaptionColor(ColorPicker sender, ColorChangedEventArgs args)
+    {
+        if (_syncingInspector) return;
+        if (InsCapColorSwatch is not null) InsCapColorSwatch.Background = new SolidColorBrush(args.NewColor);
+        ApplyToSelected(i => i.CaptionColor = args.NewColor);
+    }
+
+    private void OnInsCaptionBg(ColorPicker sender, ColorChangedEventArgs args)
+    {
+        if (_syncingInspector) return;
+        if (InsCapBgSwatch is not null) InsCapBgSwatch.Background = new SolidColorBrush(args.NewColor);
+        ApplyToSelected(i => i.CaptionBg = args.NewColor);
+    }
+
+    private void OnInsCaptionSourceChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncingInspector || InsCaptionSource.SelectedIndex <= 0) return;
+        int idx = InsCaptionSource.SelectedIndex; // 1=filename, 2=number
+        foreach (var img in _selected)
+        {
+            int n = _images.IndexOf(img) + 1;
+            img.CaptionText = idx == 1
+                ? (img.SourcePath is not null ? Path.GetFileNameWithoutExtension(img.SourcePath) : $"Imagen {n}")
+                : n.ToString();
+            if (img.CaptionPos == CaptionPosition.None) img.CaptionPos = CaptionPosition.Below;
+        }
+        var p = Primary;
+        if (p is not null)
+        {
+            _syncingInspector = true;
+            InsCaptionText.Text = p.CaptionText;
+            InsCaptionPos.SelectedIndex = (int)p.CaptionPos;
+            _syncingInspector = false;
+        }
+        PageCanvas.Invalidate();
+    }
+
+    private static int CaptionFontIndex(string font) => font switch
+    {
+        "Arial" => 1, "Georgia" => 2, "Courier New" => 3, "Times New Roman" => 4, "Verdana" => 5, "Impact" => 6, _ => 0,
+    };
 
     // ---------- Impresión vectorial (CanvasPrintDocument) ----------
 
@@ -1206,7 +1432,8 @@ public sealed partial class MainPage : Page
             double spanW = pl.ColSpan * layout.CellW + (pl.ColSpan - 1) * layout.SpacingH;
             double spanH = pl.RowSpan * layout.CellH + (pl.RowSpan - 1) * layout.SpacingV;
             var dest = new Rect(ox + cellX * scale, oy + cellY * scale, spanW * scale, spanH * scale);
-            ImageRenderer.Draw(ds, img, dest, scale);
+            ImageRenderer.Draw(ds, img, dest, scale, _global);
+            if (_global.CutGuides) DrawCutMarks(ds, dest);
         }
     }
 
