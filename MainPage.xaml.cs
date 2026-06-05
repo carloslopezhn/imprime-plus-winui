@@ -154,6 +154,12 @@ public sealed partial class MainPage : Page
                     .OrderBy(f => f).ToList();
                 await AddPathsAsync(sender, files);
             }
+
+            // Archivos pasados por línea de comandos (asociación de archivos / "abrir con").
+            var cliArgs = Environment.GetCommandLineArgs().Skip(1)
+                .Where(a => File.Exists(a) && (ImageLoader.IsImage(a) || Archives.IsArchive(a)))
+                .ToList();
+            if (cliArgs.Count > 0) await AddPathsAsync(sender, cliArgs);
         }
         else
         {
@@ -1437,28 +1443,45 @@ public sealed partial class MainPage : Page
         }
     }
 
-    // ---------- Auto-update (Velopack contra el Flask de imprime.utp.hn) ----------
+    // ---------- Auto-update (chequea versión y corre el instalador nuevo) ----------
 
-    private const string UpdateFeedUrl = "https://imprime.utp.hn/winui";
+    private sealed class UpdateInfoDto
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("version")] public string Version { get; set; } = "";
+        [System.Text.Json.Serialization.JsonPropertyName("url")] public string Url { get; set; } = "";
+    }
 
     private async void OnCheckUpdate(object sender, RoutedEventArgs e)
     {
         try
         {
-            var mgr = new Velopack.UpdateManager(UpdateFeedUrl);
-            if (!mgr.IsInstalled)
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+            var json = await http.GetStringAsync("https://imprime.utp.hn/winui/winui-latest.json");
+            var info = System.Text.Json.JsonSerializer.Deserialize<UpdateInfoDto>(json);
+            var current = typeof(MainPage).Assembly.GetName().Version ?? new Version(0, 0);
+            if (info is null || !Version.TryParse(info.Version, out var server) || server <= current)
             {
-                await ShowInfo("Actualizaciones", "Estás corriendo una compilación de desarrollo (sin instalar).");
+                await ShowInfo("Actualizaciones", $"Ya tenés la última versión ({current.ToString(3)}).");
                 return;
             }
-            var info = await mgr.CheckForUpdatesAsync();
-            if (info is null)
+
+            var ask = new ContentDialog
             {
-                await ShowInfo("Actualizaciones", "Ya tenés la última versión.");
-                return;
-            }
-            await mgr.DownloadUpdatesAsync(info);
-            mgr.ApplyUpdatesAndRestart(info);
+                Title = "Actualización disponible",
+                Content = $"Hay una versión nueva ({info.Version}). Tenés la {current.ToString(3)}.\n¿Descargar e instalar ahora?",
+                PrimaryButtonText = "Descargar e instalar",
+                CloseButtonText = "Ahora no",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.XamlRoot,
+            };
+            if (await ask.ShowAsync() != ContentDialogResult.Primary) return;
+
+            var url = info.Url.StartsWith("http") ? info.Url : "https://imprime.utp.hn" + info.Url;
+            var bytes = await http.GetByteArrayAsync(url);
+            var tmp = Path.Combine(Path.GetTempPath(), "ImprimePlus-Setup.exe");
+            await File.WriteAllBytesAsync(tmp, bytes);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(tmp) { UseShellExecute = true });
+            Application.Current.Exit();
         }
         catch (Exception ex)
         {

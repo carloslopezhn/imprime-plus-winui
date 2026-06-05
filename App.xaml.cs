@@ -41,9 +41,6 @@ public partial class App : Application
     /// </summary>
     public App()
     {
-        // Velopack: debe correr lo más temprano posible para manejar los hooks de
-        // instalación/actualización/desinstalación antes de levantar la UI.
-        Velopack.VelopackApp.Build().Run();
         InitializeComponent();
     }
 

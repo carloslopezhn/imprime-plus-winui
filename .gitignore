@@ -63,3 +63,5 @@ _test_export.pdf
 # Artefactos de empaque (grandes)
 publish/
 releases/
+
+installer-out/
