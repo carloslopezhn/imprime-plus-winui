@@ -97,6 +97,7 @@ public sealed partial class MainPage : Page
         var saved = SettingsStore.Load();
         if (saved is not null) _config = saved;
         SyncLeftPanelFromConfig();
+        UpdatePageSummary();
 
         _ready = true; // a partir de aquí los eventos del inspector ya son del usuario
     }
@@ -733,6 +734,135 @@ public sealed partial class MainPage : Page
     private void OnNavPrev(object sender, RoutedEventArgs e) { if (_currentPage > 0) _currentPage--; PageCanvas.Invalidate(); }
     private void OnNavNext(object sender, RoutedEventArgs e) { _currentPage++; PageCanvas.Invalidate(); }
     private void OnNavLast(object sender, RoutedEventArgs e) { _currentPage = int.MaxValue; PageCanvas.Invalidate(); }
+
+    // ---------- Configuración de página (modal + presets) ----------
+
+    private string _pageName = "Carta";
+
+    private void UpdatePageSummary()
+    {
+        if (PageSummary is null) return;
+        var inv = CultureInfo.InvariantCulture;
+        PageSummary.Text = $"{_pageName} — {_config.PageWidth.ToString("0.##", inv)} x {_config.PageHeight.ToString("0.##", inv)} {_config.Unit}";
+    }
+
+    private async void OnConfigPage(object sender, RoutedEventArgs e)
+    {
+        var inv = CultureInfo.InvariantCulture;
+        var presets = await PresetService.GetAsync();
+
+        var presetCombo = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, ItemsSource = presets, PlaceholderText = "Personalizado" };
+        var unitCombo = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
+        unitCombo.Items.Add("Centímetros"); unitCombo.Items.Add("Pulgadas"); unitCombo.Items.Add("Milímetros");
+        unitCombo.SelectedIndex = _config.Unit switch { Units.In => 1, Units.Mm => 2, _ => 0 };
+        string UnitOf() => unitCombo.SelectedIndex switch { 1 => Units.In, 2 => Units.Mm, _ => Units.Cm };
+
+        var wBox = new TextBox { Text = _config.PageWidth.ToString("0.##", inv) };
+        var hBox = new TextBox { Text = _config.PageHeight.ToString("0.##", inv) };
+        var rbPortrait = new RadioButton { Content = "Vertical", GroupName = "ori", IsChecked = _config.PageHeight >= _config.PageWidth };
+        var rbLandscape = new RadioButton { Content = "Horizontal", GroupName = "ori", IsChecked = _config.PageWidth > _config.PageHeight };
+        var presetName = new TextBox { PlaceholderText = "Nombre del preset", HorizontalAlignment = HorizontalAlignment.Stretch };
+
+        string curUnit = _config.Unit;
+        void ApplyOrientation()
+        {
+            double w = ParseD(wBox.Text, 0), h = ParseD(hBox.Text, 0);
+            if (rbLandscape.IsChecked == true && h > w) { wBox.Text = h.ToString("0.##", inv); hBox.Text = w.ToString("0.##", inv); }
+            else if (rbPortrait.IsChecked == true && w > h) { wBox.Text = h.ToString("0.##", inv); hBox.Text = w.ToString("0.##", inv); }
+        }
+        rbPortrait.Checked += (_, _) => ApplyOrientation();
+        rbLandscape.Checked += (_, _) => ApplyOrientation();
+
+        presetCombo.SelectionChanged += (_, _) =>
+        {
+            if (presetCombo.SelectedItem is Preset p)
+            {
+                unitCombo.SelectedIndex = p.Unit switch { Units.In => 1, Units.Mm => 2, _ => 0 };
+                curUnit = p.Unit;
+                wBox.Text = p.Width.ToString("0.##", inv);
+                hBox.Text = p.Height.ToString("0.##", inv);
+                _pageName = p.Name;
+            }
+        };
+        unitCombo.SelectionChanged += (_, _) =>
+        {
+            string nu = UnitOf();
+            if (nu == curUnit) return;
+            double w = ParseD(wBox.Text, 0), h = ParseD(hBox.Text, 0);
+            wBox.Text = LayoutEngine.FromPx(LayoutEngine.ToPx(w, curUnit), nu).ToString("0.##", inv);
+            hBox.Text = LayoutEngine.FromPx(LayoutEngine.ToPx(h, curUnit), nu).ToString("0.##", inv);
+            curUnit = nu;
+        };
+
+        var delBtn = new Button { Content = "Eliminar preset" };
+        delBtn.Click += async (_, _) =>
+        {
+            if (presetCombo.SelectedItem is Preset p && !p.Builtin)
+            {
+                if (await PresetService.DeleteAsync(p.Id)) { presets.Remove(p); presetCombo.ItemsSource = null; presetCombo.ItemsSource = presets; }
+            }
+        };
+        var saveBtn = new Button { Content = "Guardar preset" };
+        saveBtn.Click += async (_, _) =>
+        {
+            var name = presetName.Text.Trim();
+            if (name.Length == 0) return;
+            var np = await PresetService.CreateAsync(name, ParseD(wBox.Text, 1), ParseD(hBox.Text, 1), UnitOf());
+            if (np is not null) { presets.Add(np); presetCombo.ItemsSource = null; presetCombo.ItemsSource = presets; presetCombo.SelectedItem = np; }
+        };
+
+        var panel = new StackPanel { Spacing = 10, MinWidth = 320 };
+        panel.Children.Add(new TextBlock { Text = "Tamaño predefinido", FontSize = 12 });
+        var presetRow = new Grid { ColumnSpacing = 6 };
+        presetRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        presetRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(presetCombo, 0); Grid.SetColumn(delBtn, 1);
+        presetRow.Children.Add(presetCombo); presetRow.Children.Add(delBtn);
+        panel.Children.Add(presetRow);
+        panel.Children.Add(new TextBlock { Text = "Unidad", FontSize = 12, Margin = new Thickness(0, 6, 0, 0) });
+        panel.Children.Add(unitCombo);
+        var dimRow = new Grid { ColumnSpacing = 8 };
+        dimRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        dimRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var c0 = new StackPanel { Spacing = 3 }; c0.Children.Add(new TextBlock { Text = "Ancho", FontSize = 12 }); c0.Children.Add(wBox);
+        var c1 = new StackPanel { Spacing = 3 }; c1.Children.Add(new TextBlock { Text = "Alto", FontSize = 12 }); c1.Children.Add(hBox);
+        Grid.SetColumn(c0, 0); Grid.SetColumn(c1, 1); dimRow.Children.Add(c0); dimRow.Children.Add(c1);
+        panel.Children.Add(new TextBlock { Text = "Dimensiones", FontSize = 12, Margin = new Thickness(0, 6, 0, 0) });
+        panel.Children.Add(dimRow);
+        panel.Children.Add(new TextBlock { Text = "Orientación", FontSize = 12, Margin = new Thickness(0, 6, 0, 0) });
+        var oriRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
+        oriRow.Children.Add(rbPortrait); oriRow.Children.Add(rbLandscape);
+        panel.Children.Add(oriRow);
+        panel.Children.Add(new TextBlock { Text = "Guardar como preset", FontSize = 12, Margin = new Thickness(0, 6, 0, 0) });
+        var saveRow = new Grid { ColumnSpacing = 6 };
+        saveRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        saveRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(presetName, 0); Grid.SetColumn(saveBtn, 1);
+        saveRow.Children.Add(presetName); saveRow.Children.Add(saveBtn);
+        panel.Children.Add(saveRow);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Configuración de Página",
+            Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto },
+            PrimaryButtonText = "Aceptar",
+            CloseButtonText = "Cancelar",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot,
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            _config.Unit = UnitOf();
+            _config.PageWidth = Math.Max(1, ParseD(wBox.Text, _config.PageWidth));
+            _config.PageHeight = Math.Max(1, ParseD(hBox.Text, _config.PageHeight));
+            if (presetCombo.SelectedItem is Preset sp) _pageName = sp.Name;
+            else _pageName = "Personalizado";
+            SettingsStore.Save(_config);
+            UpdatePageSummary();
+            PageCanvas.Invalidate();
+        }
+    }
 
     // ---------- Inspector en vivo (panel izquierdo) ----------
 

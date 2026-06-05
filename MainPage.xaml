@@ -157,9 +157,9 @@
                             <!-- Página -->
                             <StackPanel Spacing="8">
                                 <TextBlock Text="PÁGINA" Style="{StaticResource SectionTitle}" />
-                                <TextBlock Text="Carta — 21.59 x 27.94 cm" FontSize="13"
-                                           Foreground="{StaticResource PanelTextBrush}" />
-                                <Button HorizontalAlignment="Stretch" Margin="0,4,0,0">
+                                <TextBlock x:Name="PageSummary" Text="Carta — 21.59 x 27.94 cm" FontSize="13"
+                                           Foreground="{StaticResource PanelTextBrush}" TextWrapping="Wrap" />
+                                <Button HorizontalAlignment="Stretch" Margin="0,4,0,0" Click="OnConfigPage">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon Glyph="&#xE713;" FontSize="13" />
                                         <TextBlock Text="Configurar página" />
