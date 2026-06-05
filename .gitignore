@@ -56,3 +56,6 @@ Generated\ Files/
 # Dev local (capturas de verificacion, imagenes de muestra)
 _shot_*.png
 _sample/
+
+# PDFs de prueba
+_test_export.pdf

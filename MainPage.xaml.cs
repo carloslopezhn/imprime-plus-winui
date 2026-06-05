@@ -14,7 +14,10 @@ using Microsoft.Graphics.Canvas.UI.Xaml;
 using Windows.Foundation;
 using Windows.Storage;
 using Windows.Storage.Pickers;
+using Windows.Storage.Streams;
 using Windows.System;
+using PdfSharp.Pdf;
+using PdfSharp.Drawing;
 using Windows.UI;
 using ImprimePlus.Core.Layout;
 using ImprimePlus.Editor;
@@ -30,8 +33,8 @@ public sealed partial class MainPage : Page
     private readonly List<EditorImage> _images = new();
     private readonly HashSet<EditorImage> _selected = new();
 
-    // Configuración por defecto (Carta 3x3). En Fase 4 la maneja el inspector.
-    private readonly LayoutConfig _config = new()
+    // Configuración por defecto (Carta 3x3). Se carga de AppData al iniciar.
+    private LayoutConfig _config = new()
     {
         Unit = Units.Cm,
         PageWidth = 21.59,
@@ -41,6 +44,9 @@ public sealed partial class MainPage : Page
         LayoutMode = LayoutModes.Grid,
         GridRows = 3,
         GridCols = 3,
+        CountPerPage = 9,
+        ImgWidth = 5,
+        ImgHeight = 5,
     };
 
     // Estado de vista (zoom de usuario + pan en DIPs de pantalla).
@@ -76,7 +82,35 @@ public sealed partial class MainPage : Page
         paste.Invoked += async (_, args) => { args.Handled = true; await PasteAsync(); };
         KeyboardAccelerators.Add(paste);
 
+        // Cargar config persistida y reflejarla en el panel izquierdo (con _ready=false
+        // para que setear los controles no dispare guardados redundantes).
+        var saved = SettingsStore.Load();
+        if (saved is not null) _config = saved;
+        SyncLeftPanelFromConfig();
+
         _ready = true; // a partir de aquí los eventos del inspector ya son del usuario
+    }
+
+    private void SyncLeftPanelFromConfig()
+    {
+        var inv = CultureInfo.InvariantCulture;
+        ModeCombo.SelectedIndex = _config.LayoutMode switch
+        {
+            LayoutModes.Count => 1,
+            LayoutModes.Size => 2,
+            _ => 0,
+        };
+        GridPanel.Visibility = _config.LayoutMode == LayoutModes.Grid ? Visibility.Visible : Visibility.Collapsed;
+        CountPanel.Visibility = _config.LayoutMode == LayoutModes.Count ? Visibility.Visible : Visibility.Collapsed;
+        SizePanel.Visibility = _config.LayoutMode == LayoutModes.Size ? Visibility.Visible : Visibility.Collapsed;
+        RowsBox.Text = _config.GridRows.ToString(inv);
+        ColsBox.Text = _config.GridCols.ToString(inv);
+        CountBox.Text = _config.CountPerPage.ToString(inv);
+        ImgWBox.Text = _config.ImgWidth.ToString(inv);
+        ImgHBox.Text = _config.ImgHeight.ToString(inv);
+        SpacingHBox.Text = _config.SpacingH.ToString(inv);
+        SpacingVBox.Text = _config.SpacingV.ToString(inv);
+        MarginsToggle.IsOn = _config.MarginTop > 0;
     }
 
     private void OnCreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args)
@@ -155,6 +189,12 @@ public sealed partial class MainPage : Page
             }
             var outPath = Path.Combine(AppContext.BaseDirectory, "_shot_print_render.png");
             await rt.SaveAsync(outPath, CanvasBitmapFileFormat.Png);
+        }
+
+        // Test de export PDF headless.
+        if (Environment.GetEnvironmentVariable("IMPRIME_DEV_PDFTEST") == "1" && _images.Count > 0)
+        {
+            await ExportPdfAsync(Path.Combine(AppContext.BaseDirectory, "_test_export.pdf"), 300);
         }
     }
 
@@ -650,6 +690,7 @@ public sealed partial class MainPage : Page
         if (!_ready) return;
         double m = MarginsToggle.IsOn ? 1.0 : 0.0; // cm (UI de 4 márgenes vendrá luego)
         _config.MarginTop = _config.MarginRight = _config.MarginBottom = _config.MarginLeft = m;
+        SettingsStore.Save(_config);
         PageCanvas.Invalidate();
     }
 
@@ -662,6 +703,7 @@ public sealed partial class MainPage : Page
         _config.ImgHeight = Math.Max(0.1, ParseD(ImgHBox?.Text, _config.ImgHeight));
         _config.SpacingH = Math.Max(0, ParseD(SpacingHBox?.Text, _config.SpacingH));
         _config.SpacingV = Math.Max(0, ParseD(SpacingVBox?.Text, _config.SpacingV));
+        SettingsStore.Save(_config);
         PageCanvas.Invalidate();
     }
 
@@ -864,5 +906,60 @@ public sealed partial class MainPage : Page
             var dest = new Rect(ox + cellX * scale, oy + cellY * scale, spanW * scale, spanH * scale);
             ImageRenderer.Draw(ds, img, dest, scale);
         }
+    }
+
+    // ---------- Export PDF (cada página a 300 DPI; reusa DrawPrintPage) ----------
+
+    private async void OnExportPdf(object sender, RoutedEventArgs e)
+    {
+        if (_images.Count == 0) return;
+        var picker = new FileSavePicker { SuggestedFileName = "Imprime+" };
+        picker.FileTypeChoices.Add("PDF", new List<string> { ".pdf" });
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
+        var file = await picker.PickSaveFileAsync();
+        if (file is null) return;
+        await ExportPdfAsync(file.Path, 300);
+    }
+
+    private async Task ExportPdfAsync(string path, double dpi)
+    {
+        var layout = LayoutEngine.ComputeLayout(_config);
+        if (layout.PageW <= 0 || layout.PageH <= 0) return;
+        int pages = ComputePrintPageCount();
+        double wIn = layout.PageW / 96.0, hIn = layout.PageH / 96.0;
+
+        using var doc = new PdfDocument();
+        for (int p = 1; p <= pages; p++)
+        {
+            byte[] jpeg = await RenderPageJpegAsync(p, dpi);
+            var page = doc.AddPage();
+            page.Width = XUnit.FromInch(wIn);
+            page.Height = XUnit.FromInch(hIn);
+            using var gfx = XGraphics.FromPdfPage(page);
+            using var imgStream = new MemoryStream(jpeg);
+            var ximg = XImage.FromStream(imgStream);
+            gfx.DrawImage(ximg, 0, 0, page.Width.Point, page.Height.Point);
+            ximg.Dispose();
+        }
+        doc.Save(path);
+    }
+
+    /// <summary>Render de una página a JPEG (bytes) a la DPI dada, reusando DrawPrintPage.</summary>
+    private async Task<byte[]> RenderPageJpegAsync(int pageNumber, double dpi)
+    {
+        var layout = LayoutEngine.ComputeLayout(_config);
+        using var rt = new CanvasRenderTarget(PageCanvas.Device, (float)layout.PageW, (float)layout.PageH, (float)dpi);
+        using (var ds = rt.CreateDrawingSession())
+        {
+            ds.Clear(Colors.White);
+            DrawPrintPage(ds, pageNumber, new Rect(0, 0, layout.PageW, layout.PageH));
+        }
+        using var ras = new InMemoryRandomAccessStream();
+        await rt.SaveAsync(ras, CanvasBitmapFileFormat.Jpeg, 0.95f);
+        ras.Seek(0);
+        using var net = ras.AsStreamForRead();
+        using var ms = new MemoryStream();
+        await net.CopyToAsync(ms);
+        return ms.ToArray();
     }
 }
