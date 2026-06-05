@@ -76,7 +76,8 @@
 
                         <Border Width="1" Margin="6,8" Background="{StaticResource BorderBrush2}" />
 
-                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Modo póster: una imagen en varias páginas">
+                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Modo póster: una imagen en varias páginas"
+                                Click="OnPosterButton">
                             <StackPanel Orientation="Horizontal" Spacing="5">
                                 <FontIcon Glyph="&#xE80A;" FontSize="14" />
                                 <TextBlock Text="Póster" />
@@ -171,7 +172,26 @@
                             <!-- Modo Póster -->
                             <StackPanel Spacing="8">
                                 <TextBlock Text="MODO PÓSTER" Style="{StaticResource SectionTitle}" />
-                                <ToggleSwitch Header="" OnContent="Activado" OffContent="Desactivado" />
+                                <ToggleSwitch x:Name="PosterToggle" OnContent="Activado" OffContent="Desactivado"
+                                              Toggled="OnPosterToggled" />
+                                <StackPanel x:Name="PosterOptions" Spacing="8" Visibility="Collapsed">
+                                    <TextBlock Text="Una sola imagen dividida en varias páginas"
+                                               FontSize="11.5" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Spacing="3">
+                                            <TextBlock Text="Horizontal" Style="{StaticResource FieldLabel}" />
+                                            <TextBox x:Name="PosterColsBox" Text="2" InputScope="Number" TextChanged="OnPosterFieldChanged" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="3">
+                                            <TextBlock Text="Vertical" Style="{StaticResource FieldLabel}" />
+                                            <TextBox x:Name="PosterRowsBox" Text="2" InputScope="Number" TextChanged="OnPosterFieldChanged" />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
                             </StackPanel>
 
                             <!-- Distribución -->

@@ -64,6 +64,12 @@ public sealed partial class MainPage : Page
 
     private int _idSeq;
 
+    // Modo póster: 1 imagen dividida en _posterCols x _posterRows páginas.
+    private bool _posterEnabled;
+    private int _posterCols = 2, _posterRows = 2;
+    private bool IsPoster => _posterEnabled && _images.Count > 0;
+    private int PosterPageCount => Math.Max(1, _posterCols) * Math.Max(1, _posterRows);
+
     private const double PageGap = 40;   // separación entre páginas (unidades world)
     private const double Pad = 32;       // margen de la hoja al viewport
 
@@ -195,6 +201,14 @@ public sealed partial class MainPage : Page
         if (Environment.GetEnvironmentVariable("IMPRIME_DEV_PDFTEST") == "1" && _images.Count > 0)
         {
             await ExportPdfAsync(Path.Combine(AppContext.BaseDirectory, "_test_export.pdf"), 300);
+        }
+
+        // Test de modo póster headless.
+        if (Environment.GetEnvironmentVariable("IMPRIME_DEV_POSTER") == "1" && _images.Count > 0)
+        {
+            _selected.Clear(); _selected.Add(_images[0]);
+            PosterToggle.IsOn = true; // dispara OnPosterToggled
+            sender.Invalidate();
         }
     }
 
@@ -557,6 +571,8 @@ public sealed partial class MainPage : Page
         var layout = LayoutEngine.ComputeLayout(_config);
         if (layout.PageW <= 0 || layout.PageH <= 0) return;
 
+        if (IsPoster) { DrawPosterScene(ds, size, layout); return; }
+
         var items = _images.Select(i => (ImageItem?)i.ToItem()).ToList();
         var pages = LayoutEngine.Paginate(items, layout);
         int nPages = pages.Count;
@@ -639,6 +655,63 @@ public sealed partial class MainPage : Page
         _lastPages = pagePlacements;
     }
 
+    // ---------- Modo póster ----------
+
+    private void DrawPosterScene(CanvasDrawingSession ds, Size size, LayoutResult layout)
+    {
+        var src = Primary ?? _images[0];
+        int n = PosterPageCount;
+        double worldW = layout.PageW;
+        double worldH = n * layout.PageH + (n - 1) * PageGap;
+
+        double baseScale = Math.Min((size.Width - 2 * Pad) / worldW, (size.Height - 2 * Pad) / worldH);
+        if (baseScale <= 0 || double.IsNaN(baseScale) || double.IsInfinity(baseScale)) baseScale = 0.05;
+        double scale = baseScale * _userZoom;
+        double ox = (size.Width - worldW * scale) / 2.0 + _panX;
+        double oy = (size.Height - worldH * scale) / 2.0 + _panY;
+
+        Color border = ColorHelper.FromArgb(255, 0xC7, 0xD2, 0xE0);
+        Color tag = ColorHelper.FromArgb(255, 0x64, 0x74, 0x8B);
+
+        for (int p = 0; p < n; p++)
+        {
+            double pageTop = p * (layout.PageH + PageGap);
+            double px = ox, py = oy + pageTop * scale, pw = layout.PageW * scale, ph = layout.PageH * scale;
+            ds.FillRectangle(new Rect(px + 3, py + 4, pw, ph), ColorHelper.FromArgb(40, 0, 0, 0));
+            ds.FillRectangle(new Rect(px, py, pw, ph), Colors.White);
+            ds.DrawRectangle(new Rect(px, py, pw, ph), border, 1f);
+            DrawPosterTile(ds, src, layout, p, ox, oy, scale, pageTop);
+            // Numeración de página (col,row) como referencia de armado.
+            int col = p % _posterCols, row = p / _posterCols;
+            using var fmt = new Microsoft.Graphics.Canvas.Text.CanvasTextFormat { FontSize = (float)Math.Max(9, 11 * scale) };
+            ds.DrawText($"{col + 1},{row + 1}", (float)(px + 6), (float)(py + 4), tag, fmt);
+        }
+
+        _lastScale = scale; _lastOx = ox; _lastOy = oy; _lastLayout = layout; _lastPages = new List<List<Placement>>();
+    }
+
+    /// <summary>Dibuja el recorte de póster que corresponde a la página <paramref name="pageIndex"/>.</summary>
+    private void DrawPosterTile(CanvasDrawingSession ds, EditorImage src, LayoutResult L, int pageIndex,
+        double ox, double oy, double scale, double pageTopWorld)
+    {
+        int col = pageIndex % _posterCols, row = pageIndex / _posterCols;
+        double posterW = _posterCols * L.ContentW, posterH = _posterRows * L.ContentH;
+        double bw = src.Bitmap.Size.Width, bh = src.Bitmap.Size.Height;
+        if (bw <= 0 || bh <= 0 || posterW <= 0 || posterH <= 0) return;
+
+        double s = Math.Max(posterW / bw, posterH / bh); // cover de la imagen sobre todo el póster
+        double iw = bw * s, ih = bh * s;
+        double posterX0 = (posterW - iw) / 2, posterY0 = (posterH - ih) / 2;
+        double cx = L.MarginLeft, cy = pageTopWorld + L.MarginTop;
+        double imgX = cx - col * L.ContentW + posterX0;
+        double imgY = cy - row * L.ContentH + posterY0;
+
+        var contentScreen = new Rect(ox + cx * scale, oy + cy * scale, L.ContentW * scale, L.ContentH * scale);
+        var imgScreen = new Rect(ox + imgX * scale, oy + imgY * scale, iw * scale, ih * scale);
+        using (ds.CreateLayer(1f, contentScreen))
+            ds.DrawImage(src.Bitmap, imgScreen);
+    }
+
     // ---------- Chrome (label de zoom + hint) ----------
 
     private void UpdateChrome()
@@ -683,6 +756,27 @@ public sealed partial class MainPage : Page
     {
         if (!_ready) return;
         ApplyLayoutFields();
+    }
+
+    private void OnPosterButton(object sender, RoutedEventArgs e)
+    {
+        PosterToggle.IsOn = !PosterToggle.IsOn; // dispara OnPosterToggled
+    }
+
+    private void OnPosterToggled(object sender, RoutedEventArgs e)
+    {
+        if (!_ready) return;
+        _posterEnabled = PosterToggle.IsOn;
+        PosterOptions.Visibility = _posterEnabled ? Visibility.Visible : Visibility.Collapsed;
+        PageCanvas.Invalidate();
+    }
+
+    private void OnPosterFieldChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!_ready) return;
+        _posterCols = ParseI(PosterColsBox?.Text, 2, 1, 4);
+        _posterRows = ParseI(PosterRowsBox?.Text, 2, 1, 4);
+        PageCanvas.Invalidate();
     }
 
     private void OnMarginsToggled(object sender, RoutedEventArgs e)
@@ -869,6 +963,7 @@ public sealed partial class MainPage : Page
 
     private int ComputePrintPageCount()
     {
+        if (IsPoster) return PosterPageCount;
         var layout = LayoutEngine.ComputeLayout(_config);
         var items = _images.Select(i => (ImageItem?)i.ToItem()).ToList();
         return LayoutEngine.Paginate(items, layout).Count;
@@ -883,6 +978,16 @@ public sealed partial class MainPage : Page
     {
         var layout = LayoutEngine.ComputeLayout(_config);
         if (layout.PageW <= 0 || layout.PageH <= 0) return;
+
+        if (IsPoster)
+        {
+            if (pageNumber < 1 || pageNumber > PosterPageCount) return;
+            double sc = Math.Min(imageable.Width / layout.PageW, imageable.Height / layout.PageH);
+            double oxp = imageable.X + (imageable.Width - layout.PageW * sc) / 2.0;
+            double oyp = imageable.Y + (imageable.Height - layout.PageH * sc) / 2.0;
+            DrawPosterTile(ds, Primary ?? _images[0], layout, pageNumber - 1, oxp, oyp, sc, 0);
+            return;
+        }
 
         var items = _images.Select(i => (ImageItem?)i.ToItem()).ToList();
         var pages = LayoutEngine.Paginate(items, layout);
