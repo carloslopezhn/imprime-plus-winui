@@ -156,7 +156,10 @@
 
                             <!-- Página -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="PÁGINA" Style="{StaticResource SectionTitle}" />
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xF392;" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Text="PÁGINA" Style="{StaticResource SectionTitle}" Margin="0" />
+                                </StackPanel>
                                 <TextBlock x:Name="PageSummary" Text="Carta — 21.59 x 27.94 cm" FontSize="13"
                                            Foreground="{StaticResource PanelTextBrush}" TextWrapping="Wrap" />
                                 <Button HorizontalAlignment="Stretch" Margin="0,4,0,0" Click="OnConfigPage">
@@ -169,7 +172,10 @@
 
                             <!-- Modo Póster -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="MODO PÓSTER" Style="{StaticResource SectionTitle}" />
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xF310;" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Text="MODO PÓSTER" Style="{StaticResource SectionTitle}" Margin="0" />
+                                </StackPanel>
                                 <ToggleSwitch x:Name="PosterToggle" OnContent="Activado" OffContent="Desactivado"
                                               Toggled="OnPosterToggled" />
                                 <StackPanel x:Name="PosterOptions" Spacing="8" Visibility="Collapsed">
@@ -194,7 +200,10 @@
 
                             <!-- Distribución -->
                             <StackPanel Spacing="10">
-                                <TextBlock Text="DISTRIBUCIÓN" Style="{StaticResource SectionTitle}" />
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xF3FA;" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Text="DISTRIBUCIÓN" Style="{StaticResource SectionTitle}" Margin="0" />
+                                </StackPanel>
 
                                 <StackPanel Spacing="3">
                                     <TextBlock Text="Modo" Style="{StaticResource FieldLabel}" />
@@ -297,7 +306,10 @@
 
                             <!-- Imágenes (global) -->
                             <StackPanel Spacing="8">
-                                <TextBlock Text="IMÁGENES (GLOBAL)" Style="{StaticResource SectionTitle}" />
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xF42A;" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Text="IMÁGENES (GLOBAL)" Style="{StaticResource SectionTitle}" Margin="0" />
+                                </StackPanel>
                                 <TextBlock Text="Forma" Style="{StaticResource FieldLabel}" />
                                 <ComboBox x:Name="GShape" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="OnGlobalChanged">
                                     <ComboBoxItem Content="Rectángulo" />
