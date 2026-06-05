@@ -14,6 +14,9 @@ public enum ImageShape { Rectangle, Rounded, Circle, Hexagon, Star }
 /// <summary>Posición del título/caption respecto a la imagen.</summary>
 public enum CaptionPosition { None, Below, Above, Overlay }
 
+/// <summary>Origen del texto del título global.</summary>
+public enum CaptionSource { Filename, Number }
+
 /// <summary>Intensidad de la sombra de la imagen.</summary>
 public enum ShadowStrength { None, Soft, Medium, Strong }
 
@@ -63,13 +66,15 @@ public sealed class EditorImage
     public double Invert { get; set; } = 0.0;
     public double Opacity { get; set; } = 1.0;
 
-    // Caption.
+    // Caption. Por default: texto NEGRO, fondo TRANSPARENTE.
     public string CaptionText { get; set; } = "";
     public CaptionPosition CaptionPos { get; set; } = CaptionPosition.None;
     public string CaptionFont { get; set; } = "Segoe UI";
     public double CaptionSize { get; set; } = 14;
-    public Color CaptionColor { get; set; } = Colors.White;
-    public Color CaptionBg { get; set; } = Color.FromArgb(140, 0, 0, 0);
+    public Color CaptionColor { get; set; } = Colors.Black;
+    public Color CaptionBg { get; set; } = Colors.Transparent;
+    // true = el usuario editó el título de ESTA imagen → el título global no lo pisa.
+    public bool CaptionCustomized { get; set; } = false;
 
     public EditorImage(string id, CanvasBitmap bitmap)
     {

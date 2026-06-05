@@ -27,4 +27,14 @@ public sealed class GlobalDefaults
     public AlignV AlignV { get; set; } = AlignV.Top;
 
     public bool CutGuides { get; set; } = false; // toggle "Guías de corte" (G5)
+
+    // --- Títulos (global) ---  se aplican a las imágenes SIN título individual.
+    public bool CaptionsOn { get; set; } = false;
+    public CaptionSource CaptionSource { get; set; } = CaptionSource.Filename;
+    public bool CaptionFilenameExt { get; set; } = false; // false = sin extensión (default)
+    public CaptionPosition CaptionPos { get; set; } = CaptionPosition.Below;
+    public string CaptionFont { get; set; } = "Segoe UI";
+    public double CaptionSize { get; set; } = 14;
+    public Color CaptionColor { get; set; } = Colors.Black;
+    public Color CaptionBg { get; set; } = Colors.Transparent;
 }

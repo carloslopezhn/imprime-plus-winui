@@ -383,6 +383,66 @@
                                     <ComboBoxItem Content="Centro" />
                                     <ComboBoxItem Content="Abajo" />
                                 </ComboBox>
+
+                                <!-- Títulos (global) -->
+                                <TextBlock Text="TÍTULOS (GLOBAL)" Style="{StaticResource SectionTitle}" Margin="0,8,0,0" />
+                                <ToggleSwitch x:Name="GCapOn" OnContent="Mostrar títulos" OffContent="Mostrar títulos"
+                                              Toggled="OnGlobalCaptionToggle" />
+                                <TextBlock Text="Contenido" Style="{StaticResource FieldLabel}" />
+                                <ComboBox x:Name="GCapSource" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="OnGlobalCaptionSel">
+                                    <ComboBoxItem Content="Nombre de archivo" />
+                                    <ComboBoxItem Content="Número" />
+                                </ComboBox>
+                                <ToggleSwitch x:Name="GCapExt" OnContent="Con extensión" OffContent="Sin extensión"
+                                              Toggled="OnGlobalCaptionToggle" />
+                                <TextBlock Text="Posición" Style="{StaticResource FieldLabel}" />
+                                <ComboBox x:Name="GCapPos" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="OnGlobalCaptionSel">
+                                    <ComboBoxItem Content="Debajo" />
+                                    <ComboBoxItem Content="Encima" />
+                                    <ComboBoxItem Content="Sobre la imagen" />
+                                </ComboBox>
+                                <TextBlock Text="Tipografía" Style="{StaticResource FieldLabel}" />
+                                <ComboBox x:Name="GCapFont" HorizontalAlignment="Stretch" SelectedIndex="0" SelectionChanged="OnGlobalCaptionSel">
+                                    <ComboBoxItem Content="Segoe UI" />
+                                    <ComboBoxItem Content="Arial" />
+                                    <ComboBoxItem Content="Georgia" />
+                                    <ComboBoxItem Content="Courier New" />
+                                    <ComboBoxItem Content="Times New Roman" />
+                                    <ComboBoxItem Content="Verdana" />
+                                    <ComboBoxItem Content="Impact" />
+                                </ComboBox>
+                                <TextBlock Text="Tamaño de fuente" Style="{StaticResource FieldLabel}" />
+                                <Slider x:Name="GCapSize" Minimum="6" Maximum="48" Value="14" ValueChanged="OnGlobalCaptionSlider" />
+                                <StackPanel Orientation="Horizontal" Spacing="14">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="Texto" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" />
+                                        <Button Width="38" Height="26" Padding="0">
+                                            <Border x:Name="GCapColorSwatch" Background="Black" Width="24" Height="14"
+                                                    BorderBrush="{StaticResource BorderBrush2}" BorderThickness="1" />
+                                            <Button.Flyout>
+                                                <Flyout>
+                                                    <ColorPicker x:Name="GCapColorPicker" ColorSpectrumShape="Ring"
+                                                                 IsMoreButtonVisible="False" IsColorChannelTextInputVisible="False"
+                                                                 IsHexInputVisible="True" ColorChanged="OnGlobalCaptionColor" />
+                                                </Flyout>
+                                            </Button.Flyout>
+                                        </Button>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="Fondo" Style="{StaticResource FieldLabel}" VerticalAlignment="Center" />
+                                        <Button Width="38" Height="26" Padding="0">
+                                            <Border x:Name="GCapBgSwatch" Background="Transparent" Width="24" Height="14"
+                                                    BorderBrush="{StaticResource BorderBrush2}" BorderThickness="1" />
+                                            <Button.Flyout>
+                                                <Flyout>
+                                                    <ColorPicker x:Name="GCapBgPicker" ColorSpectrumShape="Ring"
+                                                                 IsMoreButtonVisible="False" IsColorChannelTextInputVisible="False"
+                                                                 IsAlphaEnabled="True" IsHexInputVisible="True" ColorChanged="OnGlobalCaptionBg" />
+                                                </Flyout>
+                                            </Button.Flyout>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
@@ -582,7 +642,8 @@
                                         <TextBlock Text="Origen" Style="{StaticResource FieldLabel}" />
                                         <ComboBox x:Name="InsCaptionSource" HorizontalAlignment="Stretch" SelectionChanged="OnInsCaptionSourceChanged">
                                             <ComboBoxItem Content="Manual" />
-                                            <ComboBoxItem Content="Nombre de archivo" />
+                                            <ComboBoxItem Content="Nombre (sin extensión)" />
+                                            <ComboBoxItem Content="Nombre (con extensión)" />
                                             <ComboBoxItem Content="Numeración" />
                                         </ComboBox>
                                     </StackPanel>
@@ -630,6 +691,8 @@
                                             </Button>
                                         </StackPanel>
                                     </StackPanel>
+                                    <Button Content="Usar título global" HorizontalAlignment="Stretch"
+                                            Click="OnInsCaptionUseGlobal" />
                                 </StackPanel>
                             </StackPanel>
                         </ScrollViewer>

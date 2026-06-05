@@ -762,6 +762,7 @@ public sealed partial class MainPage : Page
             Grayscale = img.Grayscale, Sepia = img.Sepia, Hue = img.Hue, Blur = img.Blur, Invert = img.Invert, Opacity = img.Opacity,
             CaptionText = img.CaptionText, CaptionPos = img.CaptionPos, CaptionFont = img.CaptionFont,
             CaptionSize = img.CaptionSize, CaptionColor = img.CaptionColor, CaptionBg = img.CaptionBg,
+            CaptionCustomized = img.CaptionCustomized,
         };
         c.Overrides.ColSpan = img.Overrides.ColSpan;
         c.Overrides.RowSpan = img.Overrides.RowSpan;
@@ -1027,6 +1028,36 @@ public sealed partial class MainPage : Page
             ZoomLabel.Text = $"{Math.Round(_userZoom * 100)}%";
         if (EmptyHint is not null)
             EmptyHint.Visibility = _images.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ApplyGlobalCaptions(); // re-derivar títulos globales (alta/baja/orden de imágenes)
+    }
+
+    /// <summary>
+    /// Aplica el título GLOBAL a las imágenes que no tienen título individual
+    /// (CaptionCustomized=false). El texto sale del origen elegido (nombre de archivo
+    /// con/sin extensión, o número). No invalida el lienzo (lo hace quien llama).
+    /// </summary>
+    private void ApplyGlobalCaptions()
+    {
+        for (int i = 0; i < _images.Count; i++)
+        {
+            var img = _images[i];
+            if (img.CaptionCustomized) continue; // respeta los cambios individuales
+            if (!_global.CaptionsOn) { img.CaptionPos = CaptionPosition.None; continue; }
+            img.CaptionPos = _global.CaptionPos;
+            img.CaptionFont = _global.CaptionFont;
+            img.CaptionSize = _global.CaptionSize;
+            img.CaptionColor = _global.CaptionColor;
+            img.CaptionBg = _global.CaptionBg;
+            img.CaptionText = _global.CaptionSource == CaptionSource.Number
+                ? (i + 1).ToString()
+                : CaptionFromFilename(img, _global.CaptionFilenameExt, i);
+        }
+    }
+
+    private static string CaptionFromFilename(EditorImage img, bool withExt, int index)
+    {
+        if (string.IsNullOrEmpty(img.SourcePath)) return $"Imagen {index + 1}";
+        return withExt ? Path.GetFileName(img.SourcePath) : Path.GetFileNameWithoutExtension(img.SourcePath);
     }
 
     // ---------- Navegación de páginas (barra inferior) ----------
@@ -1310,6 +1341,49 @@ public sealed partial class MainPage : Page
         PageCanvas.Invalidate();
     }
 
+    // ---------- Títulos globales ----------
+
+    private void OnGlobalCaptionToggle(object sender, RoutedEventArgs e) { if (_ready) ApplyGlobalCaptionUi(); }
+    private void OnGlobalCaptionSel(object sender, SelectionChangedEventArgs e) { if (_ready) ApplyGlobalCaptionUi(); }
+    private void OnGlobalCaptionSlider(object sender, RangeBaseValueChangedEventArgs e) { if (_ready) ApplyGlobalCaptionUi(); }
+
+    private void ApplyGlobalCaptionUi()
+    {
+        _global.CaptionsOn = GCapOn.IsOn;
+        _global.CaptionSource = GCapSource.SelectedIndex == 1 ? CaptionSource.Number : CaptionSource.Filename;
+        _global.CaptionFilenameExt = GCapExt.IsOn;
+        _global.CaptionPos = GCapPos.SelectedIndex switch
+        {
+            1 => CaptionPosition.Above,
+            2 => CaptionPosition.Overlay,
+            _ => CaptionPosition.Below,
+        };
+        _global.CaptionFont = (GCapFont.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Segoe UI";
+        _global.CaptionSize = GCapSize.Value;
+        // El toggle de extensión sólo aplica a "Nombre de archivo".
+        if (GCapExt is not null) GCapExt.IsEnabled = _global.CaptionSource == CaptionSource.Filename;
+        ApplyGlobalCaptions();
+        PageCanvas.Invalidate();
+    }
+
+    private void OnGlobalCaptionColor(ColorPicker sender, ColorChangedEventArgs args)
+    {
+        if (!_ready) return;
+        _global.CaptionColor = args.NewColor;
+        if (GCapColorSwatch is not null) GCapColorSwatch.Background = new SolidColorBrush(args.NewColor);
+        ApplyGlobalCaptions();
+        PageCanvas.Invalidate();
+    }
+
+    private void OnGlobalCaptionBg(ColorPicker sender, ColorChangedEventArgs args)
+    {
+        if (!_ready) return;
+        _global.CaptionBg = args.NewColor;
+        if (GCapBgSwatch is not null) GCapBgSwatch.Background = new SolidColorBrush(args.NewColor);
+        ApplyGlobalCaptions();
+        PageCanvas.Invalidate();
+    }
+
     private void ApplyLayoutFields()
     {
         _config.GridRows = ParseI(RowsBox?.Text, _config.GridRows, 1, 50);
@@ -1537,56 +1611,62 @@ public sealed partial class MainPage : Page
         UpdateInspector();
     }
 
+    // Cualquier edición individual del título marca la imagen como "personalizada"
+    // → el título global deja de pisarla.
     private void OnInsCaptionTextChanged(object sender, TextChangedEventArgs e)
     {
         if (_syncingInspector) return;
-        ApplyToSelected(i => i.CaptionText = InsCaptionText.Text);
+        ApplyToSelected(i => { i.CaptionText = InsCaptionText.Text; i.CaptionCustomized = true; });
     }
 
     private void OnInsCaptionPosChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_syncingInspector || InsCaptionPos.SelectedIndex < 0) return;
-        ApplyToSelected(i => i.CaptionPos = (CaptionPosition)InsCaptionPos.SelectedIndex);
+        ApplyToSelected(i => { i.CaptionPos = (CaptionPosition)InsCaptionPos.SelectedIndex; i.CaptionCustomized = true; });
     }
 
     private void OnInsCaptionStyleChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_syncingInspector) return;
         var f = (InsCaptionFont.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Segoe UI";
-        ApplyToSelected(i => i.CaptionFont = f);
+        ApplyToSelected(i => { i.CaptionFont = f; i.CaptionCustomized = true; });
     }
 
     private void OnInsCaptionSlider(object sender, RangeBaseValueChangedEventArgs e)
     {
         if (_syncingInspector) return;
-        ApplyToSelected(i => i.CaptionSize = InsCaptionSize.Value);
+        ApplyToSelected(i => { i.CaptionSize = InsCaptionSize.Value; i.CaptionCustomized = true; });
     }
 
     private void OnInsCaptionColor(ColorPicker sender, ColorChangedEventArgs args)
     {
         if (_syncingInspector) return;
         if (InsCapColorSwatch is not null) InsCapColorSwatch.Background = new SolidColorBrush(args.NewColor);
-        ApplyToSelected(i => i.CaptionColor = args.NewColor);
+        ApplyToSelected(i => { i.CaptionColor = args.NewColor; i.CaptionCustomized = true; });
     }
 
     private void OnInsCaptionBg(ColorPicker sender, ColorChangedEventArgs args)
     {
         if (_syncingInspector) return;
         if (InsCapBgSwatch is not null) InsCapBgSwatch.Background = new SolidColorBrush(args.NewColor);
-        ApplyToSelected(i => i.CaptionBg = args.NewColor);
+        ApplyToSelected(i => { i.CaptionBg = args.NewColor; i.CaptionCustomized = true; });
     }
 
     private void OnInsCaptionSourceChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_syncingInspector || InsCaptionSource.SelectedIndex <= 0) return;
-        int idx = InsCaptionSource.SelectedIndex; // 1=filename, 2=number
+        int idx = InsCaptionSource.SelectedIndex; // 1=nombre sin ext, 2=nombre con ext, 3=número
         foreach (var img in _selected)
         {
             int n = _images.IndexOf(img) + 1;
-            img.CaptionText = idx == 1
-                ? (img.SourcePath is not null ? Path.GetFileNameWithoutExtension(img.SourcePath) : $"Imagen {n}")
-                : n.ToString();
+            img.CaptionText = idx switch
+            {
+                1 => img.SourcePath is not null ? Path.GetFileNameWithoutExtension(img.SourcePath) : $"Imagen {n}",
+                2 => img.SourcePath is not null ? Path.GetFileName(img.SourcePath) : $"Imagen {n}",
+                _ => n.ToString(),
+            };
             if (img.CaptionPos == CaptionPosition.None) img.CaptionPos = CaptionPosition.Below;
+            img.CaptionCustomized = true;
         }
         var p = Primary;
         if (p is not null)
@@ -1596,6 +1676,15 @@ public sealed partial class MainPage : Page
             InsCaptionPos.SelectedIndex = (int)p.CaptionPos;
             _syncingInspector = false;
         }
+        PageCanvas.Invalidate();
+    }
+
+    // "Usar título global": descarta el título individual y vuelve al global.
+    private void OnInsCaptionUseGlobal(object sender, RoutedEventArgs e)
+    {
+        foreach (var img in _selected) img.CaptionCustomized = false;
+        ApplyGlobalCaptions();
+        UpdateInspector();
         PageCanvas.Invalidate();
     }
 
