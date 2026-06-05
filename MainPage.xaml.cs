@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.Graphics.Canvas;
 using Microsoft.Graphics.Canvas.Geometry;
+using Microsoft.Graphics.Canvas.Printing;
 using Microsoft.Graphics.Canvas.UI;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 using Windows.Foundation;
@@ -136,6 +137,24 @@ public sealed partial class MainPage : Page
             _selected.Clear(); _selected.Add(_images[0]);
             UpdateInspector();
             sender.Invalidate();
+        }
+
+        // Test de impresión headless: render de la página 1 a 300 DPI (lo que recibe
+        // la impresora) y guardado a PNG, para verificar nitidez vectorial sin diálogo.
+        if (Environment.GetEnvironmentVariable("IMPRIME_DEV_PRINTTEST") == "1" && _images.Count > 0)
+        {
+            const float dpi = 300f;
+            const double wIn = 8.5, hIn = 11.0;            // Carta
+            double wDip = wIn * 96, hDip = hIn * 96;
+            double m = 0.25 * 96;                          // margen imprimible 0.25"
+            using var rt = new CanvasRenderTarget(sender.Device, (float)wDip, (float)hDip, dpi);
+            using (var ds = rt.CreateDrawingSession())
+            {
+                ds.Clear(Colors.White);
+                DrawPrintPage(ds, 1, new Rect(m, m, wDip - 2 * m, hDip - 2 * m));
+            }
+            var outPath = Path.Combine(AppContext.BaseDirectory, "_shot_print_render.png");
+            await rt.SaveAsync(outPath, CanvasBitmapFileFormat.Png);
         }
     }
 
@@ -758,5 +777,92 @@ public sealed partial class MainPage : Page
     {
         if (_syncingInspector || InsCaptionPos.SelectedIndex < 0) return;
         ApplyToSelected(i => i.CaptionPos = (CaptionPosition)InsCaptionPos.SelectedIndex);
+    }
+
+    // ---------- Impresión vectorial (CanvasPrintDocument) ----------
+
+    private CanvasPrintDocument? _printDoc;
+
+    private async void OnPrint(object sender, RoutedEventArgs e)
+    {
+        if (_images.Count == 0) return;
+        var hwnd = App.WindowHandle;
+        var manager = Windows.Graphics.Printing.PrintManagerInterop.GetForWindow(hwnd);
+        manager.PrintTaskRequested += OnPrintTaskRequested;
+        try
+        {
+            await Windows.Graphics.Printing.PrintManagerInterop.ShowPrintUIForWindowAsync(hwnd);
+        }
+        catch { /* el usuario canceló o la impresora falló */ }
+        finally
+        {
+            manager.PrintTaskRequested -= OnPrintTaskRequested;
+        }
+    }
+
+    private void OnPrintTaskRequested(Windows.Graphics.Printing.PrintManager sender,
+        Windows.Graphics.Printing.PrintTaskRequestedEventArgs args)
+    {
+        // El print doc comparte el device del lienzo para reusar los mismos bitmaps GPU.
+        _printDoc = new CanvasPrintDocument(PageCanvas.Device);
+        _printDoc.PrintTaskOptionsChanged += (doc, a) => doc.SetPageCount((uint)ComputePrintPageCount());
+        _printDoc.Preview += (doc, a) =>
+        {
+            var desc = a.PrintTaskOptions.GetPageDescription(a.PageNumber);
+            DrawPrintPage(a.DrawingSession, (int)a.PageNumber, desc.ImageableRect);
+        };
+        _printDoc.Print += (doc, a) =>
+        {
+            int count = ComputePrintPageCount();
+            for (uint p = 1; p <= count; p++)
+            {
+                var desc = a.PrintTaskOptions.GetPageDescription(p);
+                using var ds = a.CreateDrawingSession();
+                DrawPrintPage(ds, (int)p, desc.ImageableRect);
+            }
+        };
+
+        args.Request.CreatePrintTask("Imprime+", req => req.SetSource(_printDoc));
+    }
+
+    private int ComputePrintPageCount()
+    {
+        var layout = LayoutEngine.ComputeLayout(_config);
+        var items = _images.Select(i => (ImageItem?)i.ToItem()).ToList();
+        return LayoutEngine.Paginate(items, layout).Count;
+    }
+
+    /// <summary>
+    /// Dibuja la página <paramref name="pageNumber"/> dentro del área imprimible
+    /// <paramref name="imageable"/> (DIPs). Misma escena que el editor → WYSIWYG y
+    /// salida VECTORIAL (texto/formas) + fotos a la resolución real de la impresora.
+    /// </summary>
+    private void DrawPrintPage(CanvasDrawingSession ds, int pageNumber, Rect imageable)
+    {
+        var layout = LayoutEngine.ComputeLayout(_config);
+        if (layout.PageW <= 0 || layout.PageH <= 0) return;
+
+        var items = _images.Select(i => (ImageItem?)i.ToItem()).ToList();
+        var pages = LayoutEngine.Paginate(items, layout);
+        if (pageNumber < 1 || pageNumber > pages.Count) return;
+
+        var placements = LayoutEngine.PlacePage(pages[pageNumber - 1].Images, layout.Cols, layout.Rows);
+
+        double scale = Math.Min(imageable.Width / layout.PageW, imageable.Height / layout.PageH);
+        if (scale <= 0 || double.IsNaN(scale)) return;
+        double ox = imageable.X + (imageable.Width - layout.PageW * scale) / 2.0;
+        double oy = imageable.Y + (imageable.Height - layout.PageH * scale) / 2.0;
+
+        var byId = _images.ToDictionary(i => i.Id);
+        foreach (var pl in placements)
+        {
+            if (!byId.TryGetValue(pl.Image.Id, out var img)) continue;
+            double cellX = layout.MarginLeft + pl.Col * (layout.CellW + layout.SpacingH);
+            double cellY = layout.MarginTop + pl.Row * (layout.CellH + layout.SpacingV);
+            double spanW = pl.ColSpan * layout.CellW + (pl.ColSpan - 1) * layout.SpacingH;
+            double spanH = pl.RowSpan * layout.CellH + (pl.RowSpan - 1) * layout.SpacingV;
+            var dest = new Rect(ox + cellX * scale, oy + cellY * scale, spanW * scale, spanH * scale);
+            ImageRenderer.Draw(ds, img, dest, scale);
+        }
     }
 }

@@ -90,7 +90,8 @@
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Configuración de impresora">
                             <FontIcon Glyph="&#xE713;" FontSize="14" />
                         </Button>
-                        <Button Style="{StaticResource ToolbarPrimaryButton}" ToolTipService.ToolTip="Imprimir todas las páginas">
+                        <Button Style="{StaticResource ToolbarPrimaryButton}" ToolTipService.ToolTip="Imprimir todas las páginas"
+                                Click="OnPrint">
                             <StackPanel Orientation="Horizontal" Spacing="5">
                                 <FontIcon Glyph="&#xE749;" FontSize="14" />
                                 <TextBlock Text="Imprimir" />
