@@ -38,7 +38,8 @@
                 <ScrollViewer Grid.Column="1" HorizontalScrollMode="Auto"
                               HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
                     <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <Button Style="{StaticResource ToolbarPrimaryButton}" ToolTipService.ToolTip="Agregar imágenes">
+                        <Button Style="{StaticResource ToolbarPrimaryButton}" ToolTipService.ToolTip="Agregar imágenes"
+                                Click="OnAddImages">
                             <StackPanel Orientation="Horizontal" Spacing="5">
                                 <FontIcon Glyph="&#xEB9F;" FontSize="14" />
                                 <TextBlock Text="Agregar" />
@@ -59,15 +60,15 @@
 
                         <Border Width="1" Margin="6,8" Background="{StaticResource BorderBrush2}" />
 
-                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Alejar">
+                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Alejar" Click="OnZoomOut">
                             <FontIcon Glyph="&#xE738;" FontSize="14" />
                         </Button>
-                        <TextBlock Text="100%" VerticalAlignment="Center" MinWidth="40" TextAlignment="Center"
+                        <TextBlock x:Name="ZoomLabel" Text="100%" VerticalAlignment="Center" MinWidth="40" TextAlignment="Center"
                                    FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
-                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Acercar">
+                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Acercar" Click="OnZoomIn">
                             <FontIcon Glyph="&#xE710;" FontSize="14" />
                         </Button>
-                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Ajustar a ventana">
+                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Ajustar a ventana" Click="OnZoomFit">
                             <FontIcon Glyph="&#xE9A6;" FontSize="14" />
                         </Button>
 
@@ -99,7 +100,7 @@
                         <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Limpiar configuraciones individuales">
                             <FontIcon Glyph="&#xED60;" FontSize="14" />
                         </Button>
-                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Vaciar todo">
+                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Vaciar todo" Click="OnClearAll">
                             <StackPanel Orientation="Horizontal" Spacing="5">
                                 <FontIcon Glyph="&#xE74D;" FontSize="14" />
                                 <TextBlock Text="Vaciar" />
@@ -215,8 +216,13 @@
 
             <!-- ===== Centro: lienzo Win2D (Direct2D / GPU) ===== -->
             <Grid Grid.Column="1">
-                <canvas:CanvasControl x:Name="PageCanvas" Draw="PageCanvas_Draw" ClearColor="#FFE8EDF3" />
-                <TextBlock Text="Arrastra imágenes aquí — o usa Agregar / Pegar / Comprimido"
+                <canvas:CanvasControl x:Name="PageCanvas" Draw="PageCanvas_Draw" ClearColor="#FFE8EDF3"
+                                      PointerWheelChanged="OnCanvasWheel"
+                                      PointerPressed="OnCanvasPressed"
+                                      PointerMoved="OnCanvasMoved"
+                                      PointerReleased="OnCanvasReleased"
+                                      PointerExited="OnCanvasReleased" />
+                <TextBlock x:Name="EmptyHint" Text="Arrastra imágenes aquí — o usa Agregar / Pegar / Comprimido"
                            VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,12"
                            FontSize="12" Foreground="{StaticResource TextMutedBrush}" IsHitTestVisible="False" />
             </Grid>

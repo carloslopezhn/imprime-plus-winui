@@ -6,7 +6,7 @@ namespace ImprimePlus.Core.Layout;
 /// Es matemática pura, sin dependencias de UI: lo usa tanto el editor (Win2D)
 /// como la impresión (CanvasPrintDocument), garantizando WYSIWYG.
 /// </summary>
-public static class LayoutEngine
+public static partial class LayoutEngine
 {
     // Conversión de cualquier unidad a px a 96 DPI (idéntico a engine.js).
     private static double UnitToPx(string unit) => unit switch
