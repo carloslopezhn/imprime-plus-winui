@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -71,6 +72,15 @@ public sealed partial class MainPage : Page
     // Guardia de impresión (evita doble-click → doble trabajo).
     private bool _printing;
 
+    // Copiar/pegar entre celdas: clipboard interno + nº de secuencia del portapapeles
+    // del sistema al momento de copiar (para decidir interno vs externo en el pegado).
+    private readonly List<EditorImage> _clipboard = new();
+    private uint _clipSeq;
+
+    // Configuración nativa de impresora por sesión: DEVMODE guardado por impresora.
+    // Se vacía al cerrar el programa → primer print de cada impresora vuelve a pedir config.
+    private readonly Dictionary<string, byte[]> _printerDevmode = new();
+
     private int _idSeq;
 
     // Modo póster: 1 imagen dividida en _posterCols x _posterRows páginas.
@@ -98,9 +108,15 @@ public sealed partial class MainPage : Page
         // el CanvasControl aún no tiene device.
         PageCanvas.CreateResources += OnCreateResources;
 
-        // Ctrl+V para pegar imágenes del portapapeles.
+        // Ctrl+C copia la(s) imagen(es) seleccionada(s); Ctrl+V pega (celda copiada o
+        // cualquier imagen del portapapeles, incluida remota). No interferir con los
+        // TextBox (donde Ctrl+C/V deben copiar/pegar texto normal).
+        var copy = new KeyboardAccelerator { Key = VirtualKey.C, Modifiers = VirtualKeyModifiers.Control };
+        copy.Invoked += (_, args) => { if (IsTextInputFocused()) return; args.Handled = true; CopySelected(); };
+        KeyboardAccelerators.Add(copy);
+
         var paste = new KeyboardAccelerator { Key = VirtualKey.V, Modifiers = VirtualKeyModifiers.Control };
-        paste.Invoked += async (_, args) => { args.Handled = true; await PasteAsync(); };
+        paste.Invoked += async (_, args) => { if (IsTextInputFocused()) return; args.Handled = true; await PasteAsync(); };
         KeyboardAccelerators.Add(paste);
 
         // Cargar config persistida y reflejarla en el panel izquierdo (con _ready=false
@@ -325,12 +341,42 @@ public sealed partial class MainPage : Page
         }
     }
 
-    // ---------- Pegar (Ctrl+V / botón) ----------
+    // ---------- Copiar / Pegar (Ctrl+C / Ctrl+V / botón) ----------
+
+    [DllImport("user32.dll")] private static extern uint GetClipboardSequenceNumber();
+
+    private bool IsTextInputFocused()
+    {
+        var fe = FocusManager.GetFocusedElement(this.XamlRoot) as FrameworkElement;
+        return fe is TextBox || fe is RichEditBox || fe is AutoSuggestBox;
+    }
+
+    /// <summary>Copia la(s) imagen(es) seleccionada(s) al clipboard interno (con todo su estilo).</summary>
+    private void CopySelected()
+    {
+        if (_selected.Count == 0) return;
+        _clipboard.Clear();
+        foreach (var img in _images.Where(_selected.Contains))
+            _clipboard.Add(CloneImage(img));
+        _clipSeq = GetClipboardSequenceNumber(); // recordar el estado del portapapeles del sistema
+    }
 
     private async void OnPaste(object sender, RoutedEventArgs e) => await PasteAsync();
 
     private async Task PasteAsync()
     {
+        // Si lo último copiado fue una celda interna y nada externo tocó el portapapeles
+        // desde entonces, pegar esas celdas (copiar de una celda y pegar en otra).
+        if (_clipboard.Count > 0 && GetClipboardSequenceNumber() == _clipSeq)
+        {
+            int added = 0;
+            foreach (var img in _clipboard) { _images.Add(CloneImage(img)); added++; }
+            if (added > 0) { UpdateChrome(); PageCanvas.Invalidate(); }
+            return;
+        }
+
+        // Si no, pegar una imagen del portapapeles del sistema: archivos, bitmap
+        // (capturas/recortes) o una URL remota (imagen copiada de la web).
         try
         {
             var view = Windows.ApplicationModel.DataTransfer.Clipboard.GetContent();
@@ -348,8 +394,29 @@ public sealed partial class MainPage : Page
                 await net.CopyToAsync(ms);
                 await AddBytesAsync(PageCanvas, ms.ToArray());
             }
+            else if (view.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.Text))
+            {
+                var text = (await view.GetTextAsync())?.Trim();
+                await PasteRemoteUrlAsync(text);
+            }
         }
-        catch { /* portapapeles sin imagen */ }
+        catch { /* portapapeles sin imagen utilizable */ }
+    }
+
+    /// <summary>Descarga una imagen desde una URL del portapapeles (contenido remoto).</summary>
+    private async Task PasteRemoteUrlAsync(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        if (!Uri.TryCreate(text, UriKind.Absolute, out var uri)) return;
+        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return;
+        try
+        {
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+            http.DefaultRequestHeaders.Add("User-Agent", "ImprimePlus");
+            var bytes = await http.GetByteArrayAsync(uri);
+            await AddBytesAsync(PageCanvas, bytes); // si no es imagen, AddBytesAsync lo ignora
+        }
+        catch { }
     }
 
     // ---------- Drag & drop ----------
@@ -1080,15 +1147,13 @@ public sealed partial class MainPage : Page
         oriRow.Children.Add(rbPortrait); oriRow.Children.Add(rbLandscape);
         panel.Children.Add(oriRow);
 
-        // --- Impresión (S2b/S3): ajuste al papel + vista previa ---
+        // --- Impresión: ajuste al área imprimible ---
         panel.Children.Add(new TextBlock { Text = "Impresión", FontSize = 12, Margin = new Thickness(0, 6, 0, 0) });
         var fitCombo = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
         fitCombo.Items.Add("Ajustar al área imprimible (recomendado)");
         fitCombo.Items.Add("Tamaño real (1:1)");
         fitCombo.SelectedIndex = _config.PrintFit == "actual" ? 1 : 0;
         panel.Children.Add(fitCombo);
-        var previewSwitch = new ToggleSwitch { Header = "Vista previa antes de imprimir", IsOn = _config.ShowPrintPreview };
-        panel.Children.Add(previewSwitch);
         panel.Children.Add(new TextBlock { Text = "Guardar como preset", FontSize = 12, Margin = new Thickness(0, 6, 0, 0) });
         var saveRow = new Grid { ColumnSpacing = 6 };
         saveRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -1113,7 +1178,6 @@ public sealed partial class MainPage : Page
             _config.PageWidth = Math.Max(1, ParseD(wBox.Text, _config.PageWidth));
             _config.PageHeight = Math.Max(1, ParseD(hBox.Text, _config.PageHeight));
             _config.PrintFit = fitCombo.SelectedIndex == 1 ? "actual" : "printable";
-            _config.ShowPrintPreview = previewSwitch.IsOn;
             if (presetCombo.SelectedItem is Preset sp) _pageName = sp.Name;
             else _pageName = "Personalizado";
             SettingsStore.Save(_config);
@@ -1587,17 +1651,10 @@ public sealed partial class MainPage : Page
         try
         {
             int total = ComputePrintPageCount();
-            // Render de cada página a JPEG 300 DPI (sirve para la preview y para imprimir).
+            // Render de cada página a JPEG 300 DPI para imprimir.
             var jpegs = new List<byte[]>(total);
             for (int p = 1; p <= total; p++)
                 jpegs.Add(await RenderPageJpegAsync(p, 300));
-
-            // S3: vista previa propia (siempre que esté activada), independiente del driver.
-            if (_config.ShowPrintPreview)
-            {
-                bool go = await ShowPrintPreviewAsync(jpegs);
-                if (!go) return;
-            }
 
             PrintJpegs(printer, jpegs);
         }
@@ -1630,11 +1687,25 @@ public sealed partial class MainPage : Page
             doc.PrinterSettings.PrinterName = printer;
             doc.OriginAtMargins = false; // origen del Graphics en la esquina del área imprimible
             doc.DefaultPageSettings.Margins = new System.Drawing.Printing.Margins(0, 0, 0, 0);
-            doc.DefaultPageSettings.Landscape = landscape;
-            // S2a: fijar el papel = preset (estándar coincidente o tamaño personalizado).
-            int paperW = (int)Math.Round(landscape ? pageH100 : pageW100); // dims en vertical
-            int paperH = (int)Math.Round(landscape ? pageW100 : pageH100);
-            doc.DefaultPageSettings.PaperSize = MatchPaperSize(doc.PrinterSettings, paperW, paperH);
+
+            // Config nativa de impresora: 1ª vez por impresora ESTA SESIÓN → abrir el
+            // cuadro nativo (papel/calidad/orientación/vista previa del driver) precargado
+            // con el papel del preset. Luego se reusa el DEVMODE de la sesión.
+            if (_printerDevmode.TryGetValue(printer, out var savedDm))
+            {
+                ApplyDevmode(doc, savedDm);
+            }
+            else
+            {
+                int paperW = (int)Math.Round(landscape ? pageH100 : pageW100); // dims en vertical
+                int paperH = (int)Math.Round(landscape ? pageW100 : pageH100);
+                doc.DefaultPageSettings.PaperSize = MatchPaperSize(doc.PrinterSettings, paperW, paperH);
+                doc.DefaultPageSettings.Landscape = landscape;
+                var dm = PromptPrinterDevmode(App.WindowHandle, doc.PrinterSettings);
+                if (dm is null) return; // el usuario canceló la configuración → no imprime
+                _printerDevmode[printer] = dm;
+                ApplyDevmode(doc, dm);
+            }
 
             int idx = 0;
             doc.PrintPage += (s, ev) =>
@@ -1689,88 +1760,67 @@ public sealed partial class MainPage : Page
         return new System.Drawing.Printing.PaperSize($"Imprime+ {w100}x{h100}", w100, h100);
     }
 
-    /// <summary>S3: vista previa propia (independiente del driver). Devuelve true si imprimir.</summary>
-    private async Task<bool> ShowPrintPreviewAsync(List<byte[]> jpegs)
+    // ---------- Configuración nativa de impresora (DEVMODE) ----------
+    // Muestra el cuadro de "Preferencias de impresión" del driver (papel, calidad,
+    // orientación, vista previa nativa…) y devuelve el DEVMODE elegido para aplicarlo
+    // al trabajo. Lo usamos la 1ª vez por impresora en cada sesión.
+
+    private const int DM_OUT_BUFFER = 2;
+    private const int DM_IN_BUFFER = 8;
+    private const int DM_IN_PROMPT = 4;
+
+    [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+    [DllImport("winspool.drv", SetLastError = true)]
+    private static extern bool ClosePrinter(IntPtr hPrinter);
+    [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int DocumentProperties(IntPtr hWnd, IntPtr hPrinter, string pDeviceName,
+        IntPtr pDevModeOutput, IntPtr pDevModeInput, int fMode);
+    [DllImport("kernel32.dll")] private static extern IntPtr GlobalLock(IntPtr hMem);
+    [DllImport("kernel32.dll")] private static extern bool GlobalUnlock(IntPtr hMem);
+    [DllImport("kernel32.dll")] private static extern IntPtr GlobalFree(IntPtr hMem);
+
+    /// <summary>Abre el cuadro nativo de preferencias y devuelve el DEVMODE (bytes) o null si canceló.</summary>
+    private static byte[]? PromptPrinterDevmode(IntPtr hwnd, System.Drawing.Printing.PrinterSettings ps)
     {
-        if (jpegs.Count == 0) return false;
-        int page = 0;
-
-        var img = new Image { Stretch = Stretch.Uniform, MaxHeight = 540, MinHeight = 340 };
-        var pageLabel = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
-        var prev = new Button { Content = "◀" };
-        var next = new Button { Content = "▶" };
-        var nav = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, HorizontalAlignment = HorizontalAlignment.Center };
-        nav.Children.Add(prev); nav.Children.Add(pageLabel); nav.Children.Add(next);
-
-        async Task ShowPage(int i)
+        if (!OpenPrinter(ps.PrinterName, out IntPtr hPrinter, IntPtr.Zero)) return null;
+        IntPtr hDevMode = IntPtr.Zero, devOut = IntPtr.Zero;
+        try
         {
-            page = Math.Clamp(i, 0, jpegs.Count - 1);
-            img.Source = await BytesToBitmapImageAsync(jpegs[page]);
-            pageLabel.Text = $"Página {page + 1} de {jpegs.Count}";
-            prev.IsEnabled = page > 0;
-            next.IsEnabled = page < jpegs.Count - 1;
+            hDevMode = ps.GetHdevmode(ps.DefaultPageSettings); // DEVMODE inicial (papel del preset)
+            IntPtr pIn = GlobalLock(hDevMode);
+            int size = DocumentProperties(hwnd, hPrinter, ps.PrinterName, IntPtr.Zero, IntPtr.Zero, 0);
+            if (size <= 0) { GlobalUnlock(hDevMode); return null; }
+            devOut = Marshal.AllocHGlobal(size);
+            int ret = DocumentProperties(hwnd, hPrinter, ps.PrinterName, devOut, pIn,
+                DM_IN_PROMPT | DM_IN_BUFFER | DM_OUT_BUFFER);
+            GlobalUnlock(hDevMode);
+            if (ret != 1) return null; // IDOK == 1; cancelar u otro → no aplicar
+            var bytes = new byte[size];
+            Marshal.Copy(devOut, bytes, 0, size);
+            return bytes;
         }
-        prev.Click += async (_, _) => await ShowPage(page - 1);
-        next.Click += async (_, _) => await ShowPage(page + 1);
-
-        var note = new TextBlock
+        catch { return null; }
+        finally
         {
-            Text = _config.PrintFit == "actual"
-                ? "Tamaño real (1:1): los extremos fuera del área imprimible podrían recortarse."
-                : "Ajustado al área imprimible: la hoja entra completa, sin recortes.",
-            TextWrapping = TextWrapping.Wrap, FontSize = 12, Opacity = 0.75, Margin = new Thickness(0, 4, 0, 0),
-        };
-        var previewToggle = new ToggleSwitch
-        {
-            Header = "Mostrar esta vista previa antes de imprimir",
-            IsOn = _config.ShowPrintPreview, Margin = new Thickness(0, 4, 0, 0),
-        };
-
-        var border = new Border
-        {
-            Background = new SolidColorBrush(Colors.White),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(255, 0xC7, 0xD2, 0xE0)),
-            BorderThickness = new Thickness(1), Padding = new Thickness(8), Child = img,
-        };
-        var panel = new StackPanel { Spacing = 6, MinWidth = 440 };
-        panel.Children.Add(border);
-        panel.Children.Add(nav);
-        panel.Children.Add(note);
-        panel.Children.Add(previewToggle);
-
-        var dlg = new ContentDialog
-        {
-            Title = "Vista previa de impresión",
-            Content = panel,
-            PrimaryButtonText = "Imprimir",
-            CloseButtonText = "Cancelar",
-            DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = this.XamlRoot,
-        };
-        await ShowPage(0);
-        var res = await dlg.ShowAsync();
-        if (previewToggle.IsOn != _config.ShowPrintPreview)
-        {
-            _config.ShowPrintPreview = previewToggle.IsOn;
-            SettingsStore.Save(_config);
+            if (hDevMode != IntPtr.Zero) GlobalFree(hDevMode);
+            if (devOut != IntPtr.Zero) Marshal.FreeHGlobal(devOut);
+            ClosePrinter(hPrinter);
         }
-        return res == ContentDialogResult.Primary;
     }
 
-    private static async Task<Microsoft.UI.Xaml.Media.Imaging.BitmapImage> BytesToBitmapImageAsync(byte[] bytes)
+    /// <summary>Aplica un DEVMODE (bytes) guardado al documento de impresión.</summary>
+    private static void ApplyDevmode(System.Drawing.Printing.PrintDocument doc, byte[] dm)
     {
-        var bi = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage();
-        using var ms = new InMemoryRandomAccessStream();
-        using (var dw = new DataWriter(ms.GetOutputStreamAt(0)))
+        IntPtr p = Marshal.AllocHGlobal(dm.Length);
+        try
         {
-            dw.WriteBytes(bytes);
-            await dw.StoreAsync();
-            await dw.FlushAsync();
-            dw.DetachStream();
+            Marshal.Copy(dm, 0, p, dm.Length);
+            doc.PrinterSettings.SetHdevmode(p);
+            doc.DefaultPageSettings.SetHdevmode(p);
         }
-        ms.Seek(0);
-        await bi.SetSourceAsync(ms);
-        return bi;
+        catch { /* DEVMODE incompatible: el doc sigue con sus defaults */ }
+        finally { Marshal.FreeHGlobal(p); }
     }
 
     private int ComputePrintPageCount()
