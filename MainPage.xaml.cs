@@ -302,14 +302,25 @@ public sealed partial class MainPage : Page
 
     private async void OnAddArchive(object sender, RoutedEventArgs e)
     {
-        var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.Downloads };
-        foreach (var ext in new[] { ".zip", ".rar", ".7z", ".tar", ".gz", ".tgz", ".bz2", ".xz" })
-            picker.FileTypeFilter.Add(ext);
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
+        try
+        {
+            // OJO: PickerLocationId.Downloads NO es valido para FileOpenPicker (solo
+            // para FileSavePicker) -> lanzaba excepcion y, al ser async void, CERRABA
+            // la app al pulsar "Comprimido". ComputerFolder ("Este equipo") si es valido.
+            var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.ComputerFolder };
+            foreach (var ext in new[] { ".zip", ".rar", ".7z", ".tar", ".gz", ".tgz", ".bz2", ".xz" })
+                picker.FileTypeFilter.Add(ext);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
 
-        var files = await picker.PickMultipleFilesAsync();
-        if (files is { Count: > 0 })
-            await AddPathsAsync(PageCanvas, files.Select(f => f.Path));
+            var files = await picker.PickMultipleFilesAsync();
+            if (files is { Count: > 0 })
+                await AddPathsAsync(PageCanvas, files.Select(f => f.Path));
+        }
+        catch (Exception ex)
+        {
+            // Defensa: ningun fallo del picker/extraccion debe cerrar la app.
+            await ShowInfo("Comprimido", "No se pudo abrir el comprimido: " + ex.Message);
+        }
     }
 
     /// <summary>Agrega imágenes desde rutas (imágenes sueltas y/o comprimidos).</summary>
