@@ -287,17 +287,30 @@ public sealed partial class MainPage : Page
 
     private async void OnAddImages(object sender, RoutedEventArgs e)
     {
-        var picker = new FileOpenPicker
+        try
         {
-            ViewMode = PickerViewMode.Thumbnail,
-            SuggestedStartLocation = PickerLocationId.PicturesLibrary,
-        };
-        foreach (var ext in ImageLoader.ImageExts) picker.FileTypeFilter.Add(ext);
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
+            // OJO: igual que el caso "Comprimido", el FileOpenPicker se hospeda en el
+            // shell vía COM y puede lanzar excepcion en algunas maquinas (p.ej. cuando
+            // la biblioteca "Imagenes" esta redirigida a OneDrive/ausente). Al ser este
+            // un async void, una excepcion no atrapada CERRABA la app. ComputerFolder
+            // ("Este equipo") es un origen valido y estable; el try/catch es la red.
+            var picker = new FileOpenPicker
+            {
+                ViewMode = PickerViewMode.Thumbnail,
+                SuggestedStartLocation = PickerLocationId.ComputerFolder,
+            };
+            foreach (var ext in ImageLoader.ImageExts) picker.FileTypeFilter.Add(ext);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
 
-        var files = await picker.PickMultipleFilesAsync();
-        if (files is { Count: > 0 })
-            await AddPathsAsync(PageCanvas, files.Select(f => f.Path));
+            var files = await picker.PickMultipleFilesAsync();
+            if (files is { Count: > 0 })
+                await AddPathsAsync(PageCanvas, files.Select(f => f.Path));
+        }
+        catch (Exception ex)
+        {
+            // Defensa: ningun fallo del picker debe cerrar la app.
+            await ShowInfo("Imagenes", "No se pudieron abrir las imagenes: " + ex.Message);
+        }
     }
 
     private async void OnAddArchive(object sender, RoutedEventArgs e)
@@ -464,6 +477,12 @@ public sealed partial class MainPage : Page
         {
             var items = await e.DataView.GetStorageItemsAsync();
             await AddPathsAsync(PageCanvas, items.OfType<StorageFile>().Select(f => f.Path));
+        }
+        catch (Exception ex)
+        {
+            // Defensa: un fallo leyendo lo arrastrado (archivo bloqueado, ruta de red
+            // caida, etc.) no debe cerrar la app — este handler es async void.
+            await ShowInfo("Arrastrar y soltar", "No se pudo agregar lo arrastrado: " + ex.Message);
         }
         finally { def.Complete(); }
     }

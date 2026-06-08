@@ -42,6 +42,39 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+
+        // Red de seguridad global: sin esto, CUALQUIER excepcion no atrapada en el
+        // hilo de UI (p.ej. la que tiraba un FileOpenPicker en ciertas maquinas)
+        // termina el proceso en seco. Marcamos Handled para mantener la app viva y
+        // dejamos un log en %TEMP%\ImprimePlus para poder diagnosticar el incidente.
+        UnhandledException += OnUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+            TryLogCrash(args.ExceptionObject as Exception, fatal: args.IsTerminating);
+        System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            TryLogCrash(args.Exception, fatal: false);
+            args.SetObserved();
+        };
+    }
+
+    private void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+    {
+        TryLogCrash(e.Exception, fatal: false);
+        // Mantener la app abierta: el usuario no pierde su trabajo por un fallo aislado.
+        e.Handled = true;
+    }
+
+    private static void TryLogCrash(Exception? ex, bool fatal)
+    {
+        if (ex is null) return;
+        try
+        {
+            var dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ImprimePlus");
+            System.IO.Directory.CreateDirectory(dir);
+            var line = $"[{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}] fatal={fatal}{Environment.NewLine}{ex}{Environment.NewLine}{new string('-', 60)}{Environment.NewLine}";
+            System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "crash.log"), line);
+        }
+        catch { /* el logging jamas debe propagar */ }
     }
 
     /// <summary>
