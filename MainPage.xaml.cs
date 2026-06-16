@@ -172,6 +172,9 @@ public sealed partial class MainPage : Page
             MarginLeftBox.Text = _config.MarginLeft.ToString(inv);
             MarginRightBox.Text = _config.MarginRight.ToString(inv);
         }
+        UpdateUnitLabels();
+        RefreshUnitButtons();
+        RefreshAlignButtons();
     }
 
     private void OnCreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args)
@@ -902,10 +905,11 @@ public sealed partial class MainPage : Page
             double localY = wy - pageTop;
             if (localY < 0 || localY > L.PageH) continue;
 
+            var (adx, ady) = ContentOffset(_lastPages[pi], L);
             foreach (var pl in _lastPages[pi])
             {
-                double cellX = L.MarginLeft + pl.Col * (L.CellW + L.SpacingH);
-                double cellY = L.MarginTop + pl.Row * (L.CellH + L.SpacingV);
+                double cellX = L.MarginLeft + pl.Col * (L.CellW + L.SpacingH) + adx;
+                double cellY = L.MarginTop + pl.Row * (L.CellH + L.SpacingV) + ady;
                 double spanW = pl.ColSpan * L.CellW + (pl.ColSpan - 1) * L.SpacingH;
                 double spanH = pl.RowSpan * L.CellH + (pl.RowSpan - 1) * L.SpacingV;
                 if (wx >= cellX && wx <= cellX + spanW && localY >= cellY && localY <= cellY + spanH)
@@ -956,6 +960,8 @@ public sealed partial class MainPage : Page
         ds.FillRectangle(new Rect(px, py, pw, ph), Colors.White);
         ds.DrawRectangle(new Rect(px, py, pw, ph), border, 1f);
 
+        var (adx, ady) = ContentOffset(placements, layout);
+
         var occupied = new bool[layout.Rows, layout.Cols];
         foreach (var pl in placements)
             for (int r = pl.Row; r < pl.Row + pl.RowSpan && r < layout.Rows; r++)
@@ -963,23 +969,26 @@ public sealed partial class MainPage : Page
                     occupied[r, c] = true;
 
         // Guías de corte: cruz "+" en el centro de cada celda vacía (como la vieja).
-        for (int r = 0; r < layout.Rows; r++)
-            for (int c = 0; c < layout.Cols; c++)
-            {
-                if (occupied[r, c]) continue;
-                double ccx = layout.MarginLeft + c * (layout.CellW + layout.SpacingH) + layout.CellW / 2;
-                double ccy = layout.MarginTop + r * (layout.CellH + layout.SpacingV) + layout.CellH / 2;
-                double len = Math.Clamp(Math.Min(layout.CellW, layout.CellH) * scale * 0.08, 4, 14);
-                float sx = (float)(ox + ccx * scale), sy = (float)(oy + ccy * scale);
-                ds.DrawLine(sx - (float)len, sy, sx + (float)len, sy, guide, 1f);
-                ds.DrawLine(sx, sy - (float)len, sx, sy + (float)len, guide, 1f);
-            }
+        // Sólo cuando el bloque NO está desplazado por alineación (si no, las cruces
+        // del grid completo no corresponderían al bloque movido).
+        if (adx == 0 && ady == 0)
+            for (int r = 0; r < layout.Rows; r++)
+                for (int c = 0; c < layout.Cols; c++)
+                {
+                    if (occupied[r, c]) continue;
+                    double ccx = layout.MarginLeft + c * (layout.CellW + layout.SpacingH) + layout.CellW / 2;
+                    double ccy = layout.MarginTop + r * (layout.CellH + layout.SpacingV) + layout.CellH / 2;
+                    double len = Math.Clamp(Math.Min(layout.CellW, layout.CellH) * scale * 0.08, 4, 14);
+                    float sx = (float)(ox + ccx * scale), sy = (float)(oy + ccy * scale);
+                    ds.DrawLine(sx - (float)len, sy, sx + (float)len, sy, guide, 1f);
+                    ds.DrawLine(sx, sy - (float)len, sx, sy + (float)len, guide, 1f);
+                }
 
         foreach (var pl in placements)
         {
             if (!byId.TryGetValue(pl.Image.Id, out var img)) continue;
-            double cellX = layout.MarginLeft + pl.Col * (layout.CellW + layout.SpacingH);
-            double cellY = layout.MarginTop + pl.Row * (layout.CellH + layout.SpacingV);
+            double cellX = layout.MarginLeft + pl.Col * (layout.CellW + layout.SpacingH) + adx;
+            double cellY = layout.MarginTop + pl.Row * (layout.CellH + layout.SpacingV) + ady;
             double spanW = pl.ColSpan * layout.CellW + (pl.ColSpan - 1) * layout.SpacingH;
             double spanH = pl.RowSpan * layout.CellH + (pl.RowSpan - 1) * layout.SpacingV;
             var dest = new Rect(ox + cellX * scale, oy + cellY * scale, spanW * scale, spanH * scale);
@@ -1256,8 +1265,152 @@ public sealed partial class MainPage : Page
             else _pageName = "Personalizado";
             SettingsStore.Save(_config);
             UpdatePageSummary();
+            UpdateUnitLabels();
+            RefreshUnitButtons();
             PageCanvas.Invalidate();
         }
+    }
+
+    // ---------- Unidad de medida (toggle rápido + etiquetas) ----------
+
+    /// <summary>Sufijo legible para mostrar en etiquetas (cm / mm / pulg).</summary>
+    private static string UnitSuffix(string unit) => unit switch
+    {
+        Units.In => "pulg",
+        Units.Mm => "mm",
+        _ => "cm",
+    };
+
+    /// <summary>Refresca las etiquetas del panel para que reflejen la unidad activa.</summary>
+    private void UpdateUnitLabels()
+    {
+        string u = UnitSuffix(_config.Unit);
+        if (ImgWLabel is not null) ImgWLabel.Text = $"Ancho img ({u})";
+        if (ImgHLabel is not null) ImgHLabel.Text = $"Alto img ({u})";
+        if (SpacingHLabel is not null) SpacingHLabel.Text = $"Espacio H ({u})";
+        if (SpacingVLabel is not null) SpacingVLabel.Text = $"Espacio V ({u})";
+        if (MarginUnitHint is not null) MarginUnitHint.Text = $"Valores en {u}";
+    }
+
+    /// <summary>Marca el botón de unidad que corresponde a la unidad activa.</summary>
+    private void RefreshUnitButtons()
+    {
+        if (UnitCmBtn is null) return;
+        UnitCmBtn.IsChecked = _config.Unit == Units.Cm;
+        UnitMmBtn.IsChecked = _config.Unit == Units.Mm;
+        UnitInBtn.IsChecked = _config.Unit == Units.In;
+    }
+
+    private void OnUnitToggle(object sender, RoutedEventArgs e)
+    {
+        if (!_ready) return;
+        string nu = (sender as ToggleButton)?.Tag as string ?? Units.Cm;
+        ChangeUnit(nu);
+    }
+
+    /// <summary>
+    /// Cambia la unidad activa convirtiendo TODOS los valores (página, márgenes,
+    /// espaciado y tamaño de imagen) para conservar el tamaño físico, y refresca
+    /// las cajas, etiquetas y el lienzo.
+    /// </summary>
+    private void ChangeUnit(string newUnit)
+    {
+        string old = _config.Unit;
+        if (newUnit == old) { RefreshUnitButtons(); return; }
+
+        double Conv(double v) => LayoutEngine.FromPx(LayoutEngine.ToPx(v, old), newUnit);
+
+        _config.PageWidth = Conv(_config.PageWidth);
+        _config.PageHeight = Conv(_config.PageHeight);
+        _config.MarginTop = Conv(_config.MarginTop);
+        _config.MarginBottom = Conv(_config.MarginBottom);
+        _config.MarginLeft = Conv(_config.MarginLeft);
+        _config.MarginRight = Conv(_config.MarginRight);
+        _config.SpacingH = Conv(_config.SpacingH);
+        _config.SpacingV = Conv(_config.SpacingV);
+        _config.ImgWidth = Conv(_config.ImgWidth);
+        _config.ImgHeight = Conv(_config.ImgHeight);
+        _config.Unit = newUnit;
+
+        // Re-poblar las cajas desde el config ya convertido (sin disparar guardados redundantes).
+        bool prev = _ready; _ready = false;
+        var inv = CultureInfo.InvariantCulture;
+        SpacingHBox.Text = _config.SpacingH.ToString("0.##", inv);
+        SpacingVBox.Text = _config.SpacingV.ToString("0.##", inv);
+        ImgWBox.Text = _config.ImgWidth.ToString("0.##", inv);
+        ImgHBox.Text = _config.ImgHeight.ToString("0.##", inv);
+        if (MarginsToggle.IsOn)
+        {
+            MarginTopBox.Text = _config.MarginTop.ToString("0.##", inv);
+            MarginBottomBox.Text = _config.MarginBottom.ToString("0.##", inv);
+            MarginLeftBox.Text = _config.MarginLeft.ToString("0.##", inv);
+            MarginRightBox.Text = _config.MarginRight.ToString("0.##", inv);
+        }
+        _ready = prev;
+
+        UpdateUnitLabels();
+        RefreshUnitButtons();
+        UpdatePageSummary();
+        SettingsStore.Save(_config);
+        PageCanvas.Invalidate();
+    }
+
+    // ---------- Alineación del contenido en la página ----------
+
+    private void RefreshAlignButtons()
+    {
+        if (AlignTL is null) return;
+        string want = $"{_config.ContentAlignH},{_config.ContentAlignV}";
+        foreach (var b in new[] { AlignTL, AlignTC, AlignTR, AlignCL, AlignCC, AlignCR, AlignBL, AlignBC, AlignBR })
+            b.IsChecked = (b.Tag as string) == want;
+    }
+
+    private void OnAlignButton(object sender, RoutedEventArgs e)
+    {
+        if (!_ready) return;
+        var parts = ((sender as ToggleButton)?.Tag as string ?? "start,start").Split(',');
+        _config.ContentAlignH = parts.Length > 0 ? parts[0] : ContentAlign.Start;
+        _config.ContentAlignV = parts.Length > 1 ? parts[1] : ContentAlign.Start;
+        RefreshAlignButtons();
+        SettingsStore.Save(_config);
+        PageCanvas.Invalidate();
+    }
+
+    /// <summary>
+    /// Desplazamiento (dx, dy) en px-mundo para alinear el bloque ocupado por las
+    /// imágenes de la página dentro del área de contenido. Por defecto (start,start)
+    /// devuelve (0,0): comportamiento idéntico al anterior.
+    /// </summary>
+    private (double dx, double dy) ContentOffset(IReadOnlyList<Placement> placements, LayoutResult L)
+    {
+        if (placements.Count == 0) return (0, 0);
+        double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
+        foreach (var pl in placements)
+        {
+            double cx = L.MarginLeft + pl.Col * (L.CellW + L.SpacingH);
+            double cy = L.MarginTop + pl.Row * (L.CellH + L.SpacingV);
+            double sw = pl.ColSpan * L.CellW + (pl.ColSpan - 1) * L.SpacingH;
+            double sh = pl.RowSpan * L.CellH + (pl.RowSpan - 1) * L.SpacingV;
+            if (cx < minX) minX = cx;
+            if (cy < minY) minY = cy;
+            if (cx + sw > maxX) maxX = cx + sw;
+            if (cy + sh > maxY) maxY = cy + sh;
+        }
+        double blockW = maxX - minX, blockH = maxY - minY;
+
+        double dx = _config.ContentAlignH switch
+        {
+            ContentAlign.Center => L.MarginLeft + (L.ContentW - blockW) / 2.0 - minX,
+            ContentAlign.End => L.MarginLeft + L.ContentW - blockW - minX,
+            _ => L.MarginLeft - minX, // start
+        };
+        double dy = _config.ContentAlignV switch
+        {
+            ContentAlign.Center => L.MarginTop + (L.ContentH - blockH) / 2.0 - minY,
+            ContentAlign.End => L.MarginTop + L.ContentH - blockH - minY,
+            _ => L.MarginTop - minY, // start
+        };
+        return (dx, dy);
     }
 
     // ---------- Inspector en vivo (panel izquierdo) ----------
@@ -2014,12 +2167,13 @@ public sealed partial class MainPage : Page
         double ox = imageable.X + (imageable.Width - layout.PageW * scale) / 2.0;
         double oy = imageable.Y + (imageable.Height - layout.PageH * scale) / 2.0;
 
+        var (adx, ady) = ContentOffset(placements, layout);
         var byId = _images.ToDictionary(i => i.Id);
         foreach (var pl in placements)
         {
             if (!byId.TryGetValue(pl.Image.Id, out var img)) continue;
-            double cellX = layout.MarginLeft + pl.Col * (layout.CellW + layout.SpacingH);
-            double cellY = layout.MarginTop + pl.Row * (layout.CellH + layout.SpacingV);
+            double cellX = layout.MarginLeft + pl.Col * (layout.CellW + layout.SpacingH) + adx;
+            double cellY = layout.MarginTop + pl.Row * (layout.CellH + layout.SpacingV) + ady;
             double spanW = pl.ColSpan * layout.CellW + (pl.ColSpan - 1) * layout.SpacingH;
             double spanH = pl.RowSpan * layout.CellH + (pl.RowSpan - 1) * layout.SpacingV;
             var dest = new Rect(ox + cellX * scale, oy + cellY * scale, spanW * scale, spanH * scale);

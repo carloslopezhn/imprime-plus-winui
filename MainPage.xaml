@@ -169,6 +169,22 @@
                                         <TextBlock Text="Configurar página" />
                                     </StackPanel>
                                 </Button>
+
+                                <!-- Unidad de medida (toggle rápido) -->
+                                <TextBlock Text="Unidad de medida" Style="{StaticResource FieldLabel}" Margin="0,6,0,0" />
+                                <Grid x:Name="UnitToggle" ColumnSpacing="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <ToggleButton x:Name="UnitCmBtn" Grid.Column="0" Content="cm" Tag="cm"
+                                                  HorizontalAlignment="Stretch" Padding="0,4" Click="OnUnitToggle" />
+                                    <ToggleButton x:Name="UnitMmBtn" Grid.Column="1" Content="mm" Tag="mm"
+                                                  HorizontalAlignment="Stretch" Padding="0,4" Click="OnUnitToggle" />
+                                    <ToggleButton x:Name="UnitInBtn" Grid.Column="2" Content="pulg" Tag="in"
+                                                  HorizontalAlignment="Stretch" Padding="0,4" Click="OnUnitToggle" />
+                                </Grid>
                             </StackPanel>
 
                             <!-- Modo Póster -->
@@ -245,11 +261,11 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Spacing="3">
-                                        <TextBlock Text="Ancho img (cm)" Style="{StaticResource FieldLabel}" />
+                                        <TextBlock x:Name="ImgWLabel" Text="Ancho img (cm)" Style="{StaticResource FieldLabel}" />
                                         <TextBox x:Name="ImgWBox" Text="5" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Spacing="3">
-                                        <TextBlock Text="Alto img (cm)" Style="{StaticResource FieldLabel}" />
+                                        <TextBlock x:Name="ImgHLabel" Text="Alto img (cm)" Style="{StaticResource FieldLabel}" />
                                         <TextBox x:Name="ImgHBox" Text="5" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
                                     </StackPanel>
                                 </Grid>
@@ -260,11 +276,11 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Spacing="3">
-                                        <TextBlock Text="Espacio H (cm)" Style="{StaticResource FieldLabel}" />
+                                        <TextBlock x:Name="SpacingHLabel" Text="Espacio H (cm)" Style="{StaticResource FieldLabel}" />
                                         <TextBox x:Name="SpacingHBox" Text="0" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Spacing="3">
-                                        <TextBlock Text="Espacio V (cm)" Style="{StaticResource FieldLabel}" />
+                                        <TextBlock x:Name="SpacingVLabel" Text="Espacio V (cm)" Style="{StaticResource FieldLabel}" />
                                         <TextBox x:Name="SpacingVBox" Text="0" InputScope="Number" TextChanged="OnLayoutFieldChanged" />
                                     </StackPanel>
                                 </Grid>
@@ -272,6 +288,8 @@
                                 <ToggleSwitch x:Name="MarginsToggle" OnContent="Márgenes activados" OffContent="Sin márgenes"
                                               Toggled="OnMarginsToggled" />
                                 <StackPanel x:Name="MarginsPanel" Spacing="6" Visibility="Collapsed">
+                                    <TextBlock x:Name="MarginUnitHint" Text="Valores en cm" FontSize="11.5"
+                                               Foreground="{StaticResource TextMutedBrush}" />
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -303,6 +321,46 @@
                                 </StackPanel>
                                 <ToggleSwitch x:Name="CutGuidesToggle" OnContent="Guías de corte" OffContent="Guías de corte"
                                               Toggled="OnCutGuidesToggled" />
+                            </StackPanel>
+
+                            <!-- Alineación del contenido en la página -->
+                            <StackPanel Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE8E4;" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Text="ALINEACIÓN" Style="{StaticResource SectionTitle}" Margin="0" />
+                                </StackPanel>
+                                <TextBlock Text="Posición del bloque de imágenes dentro de la página"
+                                           FontSize="11.5" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                                <Grid x:Name="AlignGrid" ColumnSpacing="6" RowSpacing="6" HorizontalAlignment="Left">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <ToggleButton x:Name="AlignTL" Grid.Row="0" Grid.Column="0" Tag="start,start" Content="&#x2196;"
+                                                  Width="40" Height="34" Padding="0" FontSize="16" ToolTipService.ToolTip="Arriba izquierda" Click="OnAlignButton" />
+                                    <ToggleButton x:Name="AlignTC" Grid.Row="0" Grid.Column="1" Tag="center,start" Content="&#x2191;"
+                                                  Width="40" Height="34" Padding="0" FontSize="16" ToolTipService.ToolTip="Arriba centro" Click="OnAlignButton" />
+                                    <ToggleButton x:Name="AlignTR" Grid.Row="0" Grid.Column="2" Tag="end,start" Content="&#x2197;"
+                                                  Width="40" Height="34" Padding="0" FontSize="16" ToolTipService.ToolTip="Arriba derecha" Click="OnAlignButton" />
+                                    <ToggleButton x:Name="AlignCL" Grid.Row="1" Grid.Column="0" Tag="start,center" Content="&#x2190;"
+                                                  Width="40" Height="34" Padding="0" FontSize="16" ToolTipService.ToolTip="Centro izquierda" Click="OnAlignButton" />
+                                    <ToggleButton x:Name="AlignCC" Grid.Row="1" Grid.Column="1" Tag="center,center" Content="&#x25C9;"
+                                                  Width="40" Height="34" Padding="0" FontSize="16" ToolTipService.ToolTip="Centrado" Click="OnAlignButton" />
+                                    <ToggleButton x:Name="AlignCR" Grid.Row="1" Grid.Column="2" Tag="end,center" Content="&#x2192;"
+                                                  Width="40" Height="34" Padding="0" FontSize="16" ToolTipService.ToolTip="Centro derecha" Click="OnAlignButton" />
+                                    <ToggleButton x:Name="AlignBL" Grid.Row="2" Grid.Column="0" Tag="start,end" Content="&#x2199;"
+                                                  Width="40" Height="34" Padding="0" FontSize="16" ToolTipService.ToolTip="Abajo izquierda" Click="OnAlignButton" />
+                                    <ToggleButton x:Name="AlignBC" Grid.Row="2" Grid.Column="1" Tag="center,end" Content="&#x2193;"
+                                                  Width="40" Height="34" Padding="0" FontSize="16" ToolTipService.ToolTip="Abajo centro" Click="OnAlignButton" />
+                                    <ToggleButton x:Name="AlignBR" Grid.Row="2" Grid.Column="2" Tag="end,end" Content="&#x2198;"
+                                                  Width="40" Height="34" Padding="0" FontSize="16" ToolTipService.ToolTip="Abajo derecha" Click="OnAlignButton" />
+                                </Grid>
                             </StackPanel>
 
                             <!-- Imágenes (global) -->

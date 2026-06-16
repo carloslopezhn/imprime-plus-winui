@@ -16,6 +16,14 @@ public static class LayoutModes
     public const string Size = "size";
 }
 
+/// <summary>Alineación del bloque de contenido dentro del área imprimible de la página.</summary>
+public static class ContentAlign
+{
+    public const string Start = "start";   // izquierda / arriba
+    public const string Center = "center";
+    public const string End = "end";       // derecha / abajo
+}
+
 /// <summary>
 /// Configuración global de página + distribución. Mapea 1:1 al objeto
 /// <c>config</c> que recibía <c>Engine.computeLayout</c> en engine.js.
@@ -45,6 +53,11 @@ public sealed class LayoutConfig
 
     public double ImgWidth { get; set; }
     public double ImgHeight { get; set; }
+
+    /// <summary>Alineación horizontal del bloque de contenido en la página (start/center/end).</summary>
+    public string ContentAlignH { get; set; } = ContentAlign.Start;
+    /// <summary>Alineación vertical del bloque de contenido en la página (start/center/end).</summary>
+    public string ContentAlignV { get; set; } = ContentAlign.Start;
 
     /// <summary>Versión del esquema de settings (para migraciones). 0 = previo a v2.2.8.</summary>
     public int SchemaVersion { get; set; }
