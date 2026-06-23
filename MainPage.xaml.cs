@@ -1935,11 +1935,35 @@ public sealed partial class MainPage : Page
     private void OnPrinterConfig(object sender, RoutedEventArgs e)
     {
         var printer = SelectedPrinter;
-        if (string.IsNullOrEmpty(printer)) return;
+        if (string.IsNullOrEmpty(printer)) { _ = ShowInfo("Impresora", "No hay impresora seleccionada."); return; }
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("rundll32.exe",
-                $"printui.dll,PrintUIEntry /e /n \"{printer}\"") { UseShellExecute = true });
+            // Abre el MISMO cuadro nativo de preferencias (papel, color/B-N, calidad,
+            // orientación…) que usa la impresión y GUARDA la elección en la config de
+            // sesión (_printerDevmode). Así el usuario puede cambiar de B/N a color (o
+            // al revés) cuando quiera y la próxima impresión respeta el cambio, sin
+            // tener que cerrar y reabrir la app. Antes esto editaba las preferencias
+            // del sistema (printui.dll), que la app ignoraba.
+            var ps = new System.Drawing.Printing.PrinterSettings { PrinterName = printer };
+
+            // Semilla del cuadro: el DEVMODE ya elegido esta sesión (para que el usuario
+            // VEA su elección actual y la pueda cambiar), o el papel del preset si aún
+            // no se configuró nada para esta impresora.
+            byte[]? seed = _printerDevmode.TryGetValue(printer, out var savedDm) ? savedDm : null;
+            if (seed is null)
+            {
+                var layout = LayoutEngine.ComputeLayout(_config);
+                double pageW100 = layout.PageW / 96.0 * 100.0;
+                double pageH100 = layout.PageH / 96.0 * 100.0;
+                bool landscape = pageW100 > pageH100;
+                int paperW = (int)Math.Round(landscape ? pageH100 : pageW100);
+                int paperH = (int)Math.Round(landscape ? pageW100 : pageH100);
+                ps.DefaultPageSettings.PaperSize = MatchPaperSize(ps, paperW, paperH);
+                ps.DefaultPageSettings.Landscape = landscape;
+            }
+
+            var dm = PromptPrinterDevmode(App.WindowHandle, ps, seed);
+            if (dm is not null) _printerDevmode[printer] = dm; // se aplica en la próxima impresión
         }
         catch (Exception ex) { _ = ShowInfo("Impresora", ex.Message); }
     }
@@ -2085,9 +2109,23 @@ public sealed partial class MainPage : Page
     [DllImport("kernel32.dll")] private static extern bool GlobalUnlock(IntPtr hMem);
     [DllImport("kernel32.dll")] private static extern IntPtr GlobalFree(IntPtr hMem);
 
-    /// <summary>Abre el cuadro nativo de preferencias y devuelve el DEVMODE (bytes) o null si canceló.</summary>
-    private static byte[]? PromptPrinterDevmode(IntPtr hwnd, System.Drawing.Printing.PrinterSettings ps)
+    /// <summary>
+    /// Abre el cuadro nativo de preferencias y devuelve el DEVMODE (bytes) o null si canceló.
+    /// Si <paramref name="seed"/> trae un DEVMODE previo (reconfiguración), el cuadro abre
+    /// mostrando esa elección (papel, color/B-N, calidad…) para que el usuario la cambie.
+    /// </summary>
+    private static byte[]? PromptPrinterDevmode(IntPtr hwnd, System.Drawing.Printing.PrinterSettings ps, byte[]? seed = null)
     {
+        // Carga la semilla en ps para que GetHdevmode (el DEVMODE inicial del cuadro)
+        // refleje la elección anterior en vez de los defaults del driver.
+        if (seed is not null)
+        {
+            IntPtr seedPtr = Marshal.AllocHGlobal(seed.Length);
+            try { Marshal.Copy(seed, 0, seedPtr, seed.Length); ps.SetHdevmode(seedPtr); }
+            catch { /* DEVMODE incompatible: seguimos con los defaults del preset */ }
+            finally { Marshal.FreeHGlobal(seedPtr); }
+        }
+
         if (!OpenPrinter(ps.PrinterName, out IntPtr hPrinter, IntPtr.Zero)) return null;
         IntPtr hDevMode = IntPtr.Zero, devOut = IntPtr.Zero;
         try

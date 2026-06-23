@@ -87,7 +87,7 @@
 
                         <ComboBox x:Name="PrinterCombo" MinWidth="150" VerticalAlignment="Center"
                                   ToolTipService.ToolTip="Seleccionar impresora" PlaceholderText="Sin impresoras" />
-                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Configuración de impresora"
+                        <Button Style="{StaticResource ToolbarButton}" ToolTipService.ToolTip="Configurar impresora (papel, color/B-N, calidad) — se aplica a la próxima impresión"
                                 Click="OnPrinterConfig">
                             <FontIcon Glyph="&#xF56B;" FontSize="14" />
                         </Button>

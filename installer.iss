@@ -3,7 +3,7 @@
 ; "Imprimir con Imprime+" en imagenes.
 
 #define MyApp "Imprime+"
-#define MyVer "2.3.1"
+#define MyVer "2.3.2"
 #define MyExe "ImprimePlus.exe"
 
 [Setup]

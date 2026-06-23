@@ -2,7 +2,7 @@
 
 **Editor de impresión de imágenes para escritorio** — Diseñá layouts profesionales de fotos y enviálos directamente a tu impresora. Versión nativa de Windows construida con **WinUI 3 / .NET 8**.
 
-[![Versión](https://img.shields.io/badge/versión-2.3.0-blue.svg)](https://imprime.utp.hn)
+[![Versión](https://img.shields.io/badge/versión-2.3.2-blue.svg)](https://imprime.utp.hn)
 [![WinUI](https://img.shields.io/badge/WinUI-3-purple.svg)](https://learn.microsoft.com/windows/apps/winui/winui3/)
 [![.NET](https://img.shields.io/badge/.NET-8-512BD4.svg)](https://dotnet.microsoft.com/)
 [![Plataforma](https://img.shields.io/badge/plataforma-Windows%2010%2F11-lightgrey.svg)]()
@@ -25,6 +25,10 @@
 App nativa de escritorio · self-contained (no requiere instalar el Windows App Runtime aparte) · Windows 10/11 · 64-bit.
 
 ---
+
+## Novedades de la versión 2.3.2
+
+- **Impresión: cambiar color ↔ blanco y negro sin reiniciar** — Antes, la primera configuración de impresora (papel, color/B-N, calidad) se quedaba fija durante toda la sesión y para cambiarla había que cerrar y volver a abrir la app. Ahora el botón **Configurar impresora** abre las preferencias del controlador y **guarda tu elección para la próxima impresión**, así que podés pasar de B/N a color (o al revés) en cualquier momento.
 
 ## Novedades de la versión 2.3.0
 
